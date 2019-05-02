@@ -38,6 +38,36 @@ using namespace std;
 
 void ship_ldma() {
 
+   Double_t threshold;
+  Double_t max_range;
+  Double_t MD;
+  Double_t p_wimp;
+  int choice;
+  //cout << "Inserisci massa DM [GeV]" << endl;
+  cout << "Masse disponibili [MeV]" << endl;
+  cout << "1) 3.3 MeV \t 2) 10 MeV \t 3) 16.7 MeV \t 4) 26.7 MeV" << endl;
+  cout << "5) 50 MeV \t 6) 103.3 MeV \t 7) 170 MeV \t 8) 333 MeV" << endl;
+  cout << "Scegli opzione" << endl;
+  cin  >> choice;
+
+  if(choice==1)MD=3.3; // GeV
+  if(choice==2)MD=10.0; // GeV
+  if(choice==3)MD=16.7; // GeV
+  if(choice==4)MD=26.7; // GeV
+  if(choice==5)MD=50.0; // GeV
+  if(choice==6)MD=103.3; // GeV
+  if(choice==7)MD=170.0; // GeV
+  if(choice==8)MD=333.0; // GeV
+  
+  //cout << "Inserisci energia nu [MeV]" << endl;
+  //cin  >> E_nu;
+  cout << "Inserisci soglia minima [nm]" << endl;
+  cin  >> threshold;
+  cout << "Inserisci range max [nm]" << endl;
+  cin  >> max_range;
+  //cout << "Inserisci impulso particella [GeV]" << endl;
+  //cin >> p_wimp;
+
   int nwimp=0;
   int nnu=0;
 
@@ -46,10 +76,20 @@ void ship_ldma() {
   
   TH1F *hpdm0      = new TH1F("hpdm0","",50,0,200);
   TH1F *hpdm      = new TH1F("hpdm","",50,0,200);
-  TFile *f1 = new TFile("dm_histo.root","READ");
+  TFile *f1 = new TFile(Form("./DM_spectrum/histo_dm_%.1fMeV.root",MD),"READ");
   hpdm = (TH1F*)f1->Get("h_p_dm_lab_all");
   hpdm->Scale(1./hpdm->Integral());
   //f1->Close();
+
+  if(choice==1)MD/=1000.; // GeV
+  if(choice==2)MD/=1000.; // GeV
+  if(choice==3)MD/=1000.; // GeV
+  if(choice==4)MD/=1000.; // GeV
+  if(choice==5)MD/=1000.; // GeV
+  if(choice==6)MD/=1000.; // GeV
+  if(choice==7)MD/=1000.; // GeV
+  if(choice==8)MD/=1000.; // GeV
+  
 
   TH1F *henu0      = new TH1F("henu0","",100,0,400);
   TH1F *henu1      = new TH1F("henu1","",400,0,400);
@@ -78,21 +118,6 @@ void ship_ldma() {
   TH1F* hlen_nu[n_el];
   TH1F* hlen_dm[n_el];
   
-
-  Double_t threshold;
-  Double_t max_range;
-  Double_t MD;
-  Double_t p_wimp;
-  cout << "Inserisci massa DM [GeV]" << endl;
-  cin  >> MD;
-  //cout << "Inserisci energia nu [MeV]" << endl;
-  //cin  >> E_nu;
-  cout << "Inserisci soglia minima [nm]" << endl;
-  cin  >> threshold;
-  cout << "Inserisci range max [nm]" << endl;
-  cin  >> max_range;
-  //cout << "Inserisci impulso particella [GeV]" << endl;
-  //cin >> p_wimp;
 
   //Float_t Edm = TMath::Sqrt(p_wimp*p_wimp + MD*MD); // GeV
   Float_t Edm =0;  
@@ -204,6 +229,7 @@ void ship_ldma() {
   
     for(int k=0;k<npoints;k++){
       
+      //E_nu = 0.01; // cross-check
       E_nu = e_rnd_nu[k];      
       cos_theta = rn2->Uniform(-1,1);
       E_rec = ((E_nu*E_nu*(1-cos_theta))/(E_nu*(1-cos_theta)+iM_el))*TMath::Power(10,3); // energia nucluear recoil (MeV)
@@ -313,15 +339,15 @@ void ship_ldma() {
   rate_wimp = ((float)nwimp)/(float (npoints*n_el));
 
   cout << "Frazione di neutrini selezionati: " << rate_nu*100 << endl;
-  cout << "Frazione di wimps selezionate: " << rate_nu*100 << endl;
+  cout << "Frazione di wimps selezionate: " << rate_wimp*100 << endl;
 
-  ofstream log(Form("log_dm_%.2fMeV_range_%.2fum_%.2fum.txt",MD*1000,threshold/1000.,max_range/1000.));
+  ofstream log(Form("./Logs/log_dm_%.2fMeV_range_%.2fum_%.2fum.txt",MD*1000,threshold/1000.,max_range/1000.));
   log.is_open();
   log << "Frazione di neutrini selezionati: " << rate_nu*100 << endl;
-  log << "Frazione di wimps selezionate: " << rate_nu*100 << endl;	       
+  log << "Frazione di wimps selezionate: " << rate_wimp*100 << endl;	       
   
   
-  TFile *fout = new TFile(Form("histos_dm_%.2fMeV_range_%.2fum_%.2fum.root",MD*1000,threshold/1000.,max_range/1000.),"RECREATE");
+  TFile *fout = new TFile(Form("./Plots/histos_dm_%.1fMeV_range_%.1fum_%.1fum.root",MD*1000,threshold/1000.,max_range/1000.),"RECREATE");
 
 
   TCanvas *c01 = new TCanvas("c01","c01",1200,600);
