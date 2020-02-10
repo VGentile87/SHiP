@@ -247,7 +247,7 @@ void Loop()
      if(ientry>=0){ // for debugging
      if(ientry%100==0)cout << "VID " << ientry << endl;
      log_vtx << "\nFedra Vertex number "<< ientry << endl;
-     log_vtx << "MC_EventID / MCtrkID / MCMotherID / MCMotherpdgCode / MCpdgCode / MCProcessId" << endl;
+     log_vtx << "MC_EventID / MCtrkID / MCMotherID / MCpdgCode / MCMotherpdgCode" << endl;
      vtx_fedratree->GetEntry(ientry);
      if(flag!=2 && flag!=5){
      vtx_good_vec[ientry]=-1;
@@ -407,8 +407,8 @@ void Loop()
        mp_eventID = vtx_trackeventId.at(iel_ev);
        for(uint i=0; i<vtx_trackpdgcode.size(); i++){
 	 if(abs(vtx_trackpdgcode.at(i))==11 /*&& vtx_trackeventId.at(i)==mp_eventID*/)n_electrons++;
-	 if(abs(vtx_trackmother.at(i))==-1 && vtx_trackeventId.at(i)==mp_eventID)n_primaries++;
-	 if((abs(vtx_trackmother.at(i))==1 || abs(vtx_trackmother.at(i))==2) && vtx_trackeventId.at(i)==mp_eventID)n_charmdaug++;
+	 if(vtx_trackmother.at(i)==-1 && vtx_trackeventId.at(i)==mp_eventID)n_primaries++;
+	 if((vtx_trackmother.at(i)==1 || vtx_trackmother.at(i)==2) && vtx_trackeventId.at(i)==mp_eventID)n_charmdaug++;
        }
      }
      
@@ -539,9 +539,3 @@ int myrun(){
   Loop();
   return 0;
 }
-
-
-
-
-
-
