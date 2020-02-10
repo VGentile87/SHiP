@@ -101,11 +101,6 @@ void Loop()
   float xrange = (xmax-xmin)/width;
   float yrange = (ymax-ymin)/height;
   float zrange = (zmax-zmin)/depth; 
-  //int counts=3;
-  
-  //cout << width << " " << height << " " << depth << endl;
-  //cout << xmin << " " << xmax << " " << ymin << " " << ymax << " " << zmin << " " << zmax << endl;
-  //cout << xrange << " " << yrange << " " << zrange << endl;
 
   log_decay << "\nxrange [" << xmin << " , " << xmax << "] ; yrange [" << ymin << " , " << ymax << "] ; zrange [" << zmin << " , " << zmax << "]" << endl;
   log_decay << "Cube dimensions XYZ (" << xrange << " , " << yrange << " , " << zrange << ")" << endl;
@@ -161,11 +156,11 @@ void Loop()
   int n_electrons=0;
   int n_primaries=0;
   int n_charmdaug=0;
+  int n_events=0;
+  int n_mothers=0;
 
   bool flag_trk=0;
   bool flag_ev=0;
-  //bool evt_good=false;
-  //bool daughter_proton=false;
   bool vtx_good=false;
   
 
@@ -175,41 +170,7 @@ void Loop()
   float mp_vdx=-1;
   float mp_vdy=-1;
   float mp_vdz=-1;
-  TH1F *hoccurrence = new TH1F("occurrence / ntracks","",50,0,1);
-  /*
-  TH1F *hdeltaz = new TH1F("dz sec vtx","",500,-100,20000);
-  TH1F *hntrk = new TH1F("ntrk sec vtx","vtx2_ntrk",50,0,50);
-  TH1F *hnseg = new TH1F("nseg trk sec vtx","vtx2_nseg",50,0,50);
-  TH1F *hflag = new TH1F("flag sec vtx","vtx2_flag",20,-10,10);
-  TH1F *hka2 = new TH1F("ka trk sec vtx to prim vtx","vtx1_ka2",100,0,1);
-  TH1F *hip2 = new TH1F("ip trk sec vtx to prim vtx","vtx1_ip2",100,0,1000);
-  TH2F *hkaip2 = new TH2F("ka vs ip trk sec vtx to prim vtx","vtx1_kaip2",100,0,1000,100,0,1);
-
-  TH1F *hnseg1st = new TH1F("nseg trk primary vtx","vtx1_nseg",50,0,50);
-  TH1F *hka = new TH1F("ka trk prim vtx","vtx1_ka",100,0,1);
-  TH1F *hip = new TH1F("ip trk prim vtx","vtx1_ip",100,0,1000);
-  TH2F *hkaip = new TH2F("ka vs ip trk prim vtx","vtx1_kaip",100,0,1000,100,0,1);
-  TH1F *hkaMC = new TH1F("kaMC trk prim vtx","vtx1_kaMC",100,0,1);
-  TH1F *hipMC = new TH1F("ipMC trk prim vtx","vtx1_ipMC",100,0,1000);
-  TH2F *hkaipMC = new TH2F("kaMC vs ipMC trk prim vtx","vtx1_kaipMC",100,0,1000,100,0,1);
-
   
-  TH1F *hrmax = new TH1F("rmax trk prim vtx","vtx1_rmax",100,0,100);
-  TH1F *hipmax = new TH1F("ipmax trk prim vtx","vtx1_ipmax",100,0,100);
-  TH2F *hrmaxipmax = new TH2F("rmax vs ipmax trk prim vtx","vtx1_rmaxipmax",100,0,100,100,0,100);
-  TH1F *hrmaxsame = new TH1F("same rmax trk prim vtx","vtx1_rmaxsame",100,0,100);
-  TH1F *hipmaxsame = new TH1F("same ipmax trk prim vtx","vtx1_ipmaxsame",100,0,100);
-  TH2F *hrmaxipmaxsame = new TH2F("same rmax vs ipmax trk prim vtx","vtx1_rmaxipmaxsame",100,0,100,100,0,100);
-  TH1F *hsameseg = new TH1F("same seg ipmax rmax","same_seg",10,-1,2);
-  TH1F *hrmaxMC = new TH1F("rmaxMC trk prim vtx","vtx1_rmaxMC",100,0,100);
-  TH1F *hipmaxMC = new TH1F("ipmaxMC trk prim vtx","vtx1_ipmaxMC",100,0,100);
-  TH2F *hrmaxipmaxMC = new TH2F("rmaxMC vs ipmaxMC trk prim vtx","vtx1_rmaxipmaxMC",100,0,100,100,0,100);
-  TH1F *hrmaxsameMC = new TH1F("same rmaxMC trk prim vtx","vtx1_rmaxMCsame",100,0,100);
-  TH1F *hipmaxsameMC = new TH1F("same ipmaxMC trk prim vtx","vtx1_ipmaxMCsame",100,0,100);
-  TH2F *hrmaxipmaxsameMC = new TH2F("same rmaxMC vs ipmaxMC trk prim vtx","vtx1_rmaxipmaxMCsame",100,0,100,100,0,100);
-  TH1F *hsamesegMC = new TH1F("same seg ipmaxMC rmaxMC","same_segMC",10,-1,2);
-  */
-
   TFile * f_out = new TFile("vtx_MC_analysis.root","RECREATE");
   TTree * Tree_out = new TTree();
   Tree_out = vtx_fedratree->CloneTree(0);
@@ -233,6 +194,8 @@ void Loop()
   Tree_out->Branch("n_electrons",&n_electrons,"n_electrons/I");
   Tree_out->Branch("n_primaries",&n_primaries,"n_primaries/I");
   Tree_out->Branch("n_charmdaug",&n_charmdaug,"n_charmgaug/I");
+  Tree_out->Branch("n_events",&n_events,"n_events/I");
+  Tree_out->Branch("n_mothers",&n_mothers,"n_mothers/I");
   Tree_out->AddFriend(vtx_fedratree);
   
   
@@ -272,8 +235,6 @@ void Loop()
      int ix = floor((vx-xmin)/xrange);
      int iy = floor((vy-ymin)/yrange);
      int iz = floor((vz-zmin)/zrange);
-     //cout << vx << " " << vy <<" " << vz<< endl;
-     //cout << ix << " " << iy << " " << iz << endl;
      
      vtx_list.at(ix).at(iy).at(iz).push_back(vID);
      
@@ -320,7 +281,7 @@ void Loop()
 	   }
 	 }
        }
-       //cout <<"LOG "<< ientry << " " << vtx_trackeventId.at(h)  << " " << h << " " << vtx_trackid.at(h) << " " << vtx_trackmother.at(h) << " " << vtx_trackpdgcode.at(h) << " " << vtx_motherpdgcode.at(h) << " " << tmp_jn << endl;
+       
        if(abs(vtx_motherpdgcode.at(h))==411)log_vtx << "Figlio del D+ " << endl;
        if(abs(vtx_motherpdgcode.at(h))==421)log_vtx << "Figlio del D0 " << endl;
        if(abs(vtx_motherpdgcode.at(h))==431)log_vtx << "Figlio del Ds " << endl;
@@ -376,6 +337,24 @@ void Loop()
        }
      }
 
+
+     
+     n_electrons=0;
+     n_primaries=0;
+     n_charmdaug=0;
+     n_events=0;
+     n_mothers=0;
+
+     
+     // counts the number of events linked to the vertex
+     for(uint i=0;i<vtx_ntracks_same_event.size();i++){
+       if(vtx_ntracks_same_event[i]>0)n_events++;
+     }
+
+     // counts the number of mothers linked to the vertex
+     for(uint i=0;i<vtx_ntracks_same_mother.size();i++){
+       if(vtx_ntracks_same_mother[i]>0)n_mothers++;
+     }
      
      
      vector<int>::iterator max_mID = max_element(vtx_ntracks_same_mother.begin(), vtx_ntracks_same_mother.end()); // c++11
@@ -395,9 +374,6 @@ void Loop()
 
      int max_motherId = *max_mID;
 
-     n_electrons=0;
-     n_primaries=0;
-     n_charmdaug=0;
      
      if(max_ev_occurrence<=1){
        mp_eventID=-1;
@@ -517,12 +493,12 @@ void Loop()
        if(n_electrons>0)log_vtx << "The number of electron tracks is " <<n_electrons <<  endl;
        if(n_primaries>0)log_vtx << "The number of primary tracks is " <<n_primaries <<  endl;
        if(n_charmdaug>0)log_vtx << "The number of daughter charm tracks is " <<n_charmdaug <<  endl;
+       if(n_events>1)log_vtx << "Warning: the number of linked montecarlo events are " <<n_events <<  endl;
+       if(n_mothers>1)log_vtx << "Warning: the number of linked montecarlo mothers are " <<n_mothers <<  endl;
        
-       hoccurrence->Fill(mean_freq);
        Tree_out->Fill();
        if(ientry%1000==0)Tree_out->AutoSave("SaveSelf");
-     //cout << vx << " " << vy << " " << vz << endl;
-       hvertex->Fill(vx,vy,vz);
+       
      }
      } // flag
      } // only for special vertex

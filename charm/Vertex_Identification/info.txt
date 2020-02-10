@@ -14,3 +14,5 @@ List of variables:
 	4) n_electrons  --> Number of electrons in the vertex (even if the montecarlo id is different from mp_eventID)
 	5) n_primaries  --> Number of primary daughter tracks (mother id of the track is -1)
 	6) n_charmdaug  --> Number of charm daughter tracks (mother id of the track is 1 or 2)
+	7) n_events --> Number of montecarlo events linked to the vertex (ideal case == 1)	
+	8) n_mothers --> Number of mother IDs linked to the vertex (ideal case == 1)
