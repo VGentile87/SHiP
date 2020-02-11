@@ -355,6 +355,12 @@ void Loop()
      for(uint i=0;i<vtx_ntracks_same_mother.size();i++){
        if(vtx_ntracks_same_mother[i]>0)n_mothers++;
      }
+
+     for(uint i=0; i<vtx_trackpdgcode.size(); i++){
+       if(abs(vtx_trackpdgcode.at(i))==11)n_electrons++;
+       if(vtx_trackmother.at(i)==-1)n_primaries++;
+       if((vtx_trackmother.at(i)==1 || vtx_trackmother.at(i)==2))n_charmdaug++;
+     }
      
      
      vector<int>::iterator max_mID = max_element(vtx_ntracks_same_mother.begin(), vtx_ntracks_same_mother.end()); // c++11
@@ -381,11 +387,11 @@ void Loop()
      else {
        //cout << "iel_ev " << max_occurrence << " " << iel_ev << endl;
        mp_eventID = vtx_trackeventId.at(iel_ev);
-       for(uint i=0; i<vtx_trackpdgcode.size(); i++){
-	 if(abs(vtx_trackpdgcode.at(i))==11 /*&& vtx_trackeventId.at(i)==mp_eventID*/)n_electrons++;
-	 if(vtx_trackmother.at(i)==-1 && vtx_trackeventId.at(i)==mp_eventID)n_primaries++;
-	 if((vtx_trackmother.at(i)==1 || vtx_trackmother.at(i)==2) && vtx_trackeventId.at(i)==mp_eventID)n_charmdaug++;
-       }
+       //for(uint i=0; i<vtx_trackpdgcode.size(); i++){
+       //if(abs(vtx_trackpdgcode.at(i))==11 /*&& vtx_trackeventId.at(i)==mp_eventID*/)n_electrons++;
+       //if(vtx_trackmother.at(i)==-1 && vtx_trackeventId.at(i)==mp_eventID)n_primaries++;
+       //if((vtx_trackmother.at(i)==1 || vtx_trackmother.at(i)==2) && vtx_trackeventId.at(i)==mp_eventID)n_charmdaug++;
+       //}
      }
      
      if(max_occurrence==1){
