@@ -30,7 +30,7 @@
 
 using namespace TMVA;
 
-void TMVAClassificationApplication( TString myMethodList = "" )
+void TMVAClassificationApplication2nd( TString myMethodList = "" )
 {
 
    //---------------------------------------------------------------
@@ -137,16 +137,30 @@ void TMVAClassificationApplication( TString myMethodList = "" )
 
    // Create a set of variables and declare them to the reader
    // - the variable names MUST corresponds in name and type to those given in the weight file(s) used
-   Float_t probability, meannseg, maxaperture, vtx_fill;
-   Float_t meanIP, maxIP,varIP;
-   Float_t meanTX, meanTY, fill, vx, vy, vz;
+   Float_t probability, meannseg, maxaperture, vtx_fill, bdt_value;
+   Float_t meanIP, maxIP,varIP, mean_rms_ip, mean_rms_kink;
+   Float_t meanTX, meanTY, fill, vx, vy, vz, Rms_ip, Rms_kink;
    Int_t vID, ntracks;
-   reader->AddVariable("probability", &probability);
-   reader->AddVariable("maxaperture", &maxaperture);  // tutto
-   //reader->AddVariable("meannseg",&meannseg);  // escluso primari
-   reader->AddVariable("IP_var := meanIP/maxIP",&varIP);
-   reader->AddVariable("fill:=vtx_fill*ntracks",&fill);
    
+
+   /* //OLD
+   reader->AddVariable("meannseg",&meannseg);    // escluso primari
+   reader->AddVariable("maxaperture",&maxaperture);    // escluso primari
+   
+   //reader->AddVariable("bdt_value",&bdt_value);  
+   reader->AddVariable("Rms_kink :=mean_rms_kink/(meannseg*ntracks)",&Rms_kink);
+   reader->AddVariable("Rms_ip :=mean_rms_ip/(meannseg*ntracks)",&Rms_ip);
+   //reader->AddVariable("probability",&probability);    // escluso primari
+   reader->AddVariable("fill:=vtx_fill*probability",&fill);
+   //reader->AddVariable("maxaperture",&maxaperture);    // escluso primari
+   */
+
+   reader->AddVariable("meannseg",&meannseg);    
+   reader->AddVariable("bdt_value",&bdt_value);  
+   reader->AddVariable("Rms_kink :=mean_rms_kink",&Rms_kink);
+   reader->AddVariable("probability",&probability);    // escluso primari
+   reader->AddVariable("fill:=vtx_fill*ntracks",&fill);
+   reader->AddVariable("maxaperture",&maxaperture);
    
    
    //reader->AddVariable( "myvar1 := var1+var2", &var1 );
@@ -173,7 +187,8 @@ void TMVAClassificationApplication( TString myMethodList = "" )
 
    // Book the MVA methods
 
-   TString dir    = "dataset_1st/weights/";  
+   
+   TString dir    = "dataset_2nd/weights/";  // escluso primari
    TString prefix = "TMVAClassification";
 
    // Book method(s)
@@ -280,28 +295,28 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    //
 
    int choice=0;
-  
+   
    cout << "Scegli il tipo di dataset (1: CHARM simulation; 2: BACKGROUND simulation) \t";
    cin >> choice;
    cout << endl;
    
    TFile *input(0);
-
+   
    TString fname = "";
    TString fname_out = ""; 
 
    switch(choice){
    case 1:
-     fname = "tmva_input_vertices.root";
-     fname_out = "vtx_BDT_data_evaluated.root";
+     fname = "tmva_input_vertices2nd.root";
+     fname_out = "vtx_BDT_data_evaluated2nd.root";
      break;
    case 2:
-     fname = "tmva_input_vertices_POT.root";
-     fname_out = "vtx_BDT_data_evaluated_POT.root";
+     fname = "tmva_input_vertices2nd_POT.root";
+     fname_out = "vtx_BDT_data_evaluated2nd_POT.root";
      break;
    }
    
-   
+  
    if (!gSystem->AccessPathName( fname )) {
       input = TFile::Open( fname ); // check if file in local directory exists
    }
@@ -337,6 +352,9 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    theTree->SetBranchAddress("maxIP",&maxIP);
    theTree->SetBranchAddress("meanIP",&meanIP);
    theTree->SetBranchAddress("vtx_fill",&vtx_fill);
+   theTree->SetBranchAddress("bdt_value",&bdt_value);
+   theTree->SetBranchAddress("mean_rms_kink",&mean_rms_kink);
+   theTree->SetBranchAddress("mean_rms_ip",&mean_rms_ip);
  //  Float_t userVar1, userVar2;
  ///  theTree->SetBranchAddress( "var1", &userVar1 );
  //  theTree->SetBranchAddress( "var2", &userVar2 );
@@ -346,19 +364,18 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    // Efficiency calculator for cut method
    Int_t    nSelCutsGA = 0;
    Double_t effS       = 0.7;
-   Float_t bdt_value = 0;
+   Float_t bdt_value2 = 0;
    Int_t bdt_vID=0;
+
 
    TH1F * h = new TH1F("","",100,0,100);
 
-
    TFile *fout = new TFile(fname_out,"RECREATE");    // tutto
+  
    TTree *tree_out = new TTree();
-   //TTree *tree_middle = new TTree();
-   theTree->CloneTree()->Write();
    theTree->CloneTree()->Write();
    tree_out->SetName("bdt");
-   tree_out->Branch("bdt_value",&bdt_value,"bdt_value/F");
+   tree_out->Branch("bdt_value",&bdt_value2,"bdt_value/F");
    tree_out->Branch("bdt_vID",&bdt_vID,"bdt_vID/I");
    tree_out->AddFriend(theTree);
    
@@ -375,7 +392,10 @@ void TMVAClassificationApplication( TString myMethodList = "" )
       theTree->GetEntry(ievt);
 
       h->Fill(vtx_fill);
+      //cout << vtx_fill << endl;
       fill = vtx_fill*ntracks;
+      Rms_kink = mean_rms_kink;///meannseg;
+      Rms_ip = mean_rms_ip;///meannseg;
 
       // Return the MVA outputs and fill into histograms
 
@@ -412,7 +432,8 @@ void TMVAClassificationApplication( TString myMethodList = "" )
 
       if (Use["BDT"          ]){
 	histBdt    ->Fill( reader->EvaluateMVA( "BDT method"           ) );
-	bdt_value = reader->EvaluateMVA("BDT method");
+	bdt_value2 = reader->EvaluateMVA("BDT method");
+	//cout << ievt << " " << reader->EvaluateMVA("BDT method") << endl;
 	bdt_vID=vID;
       }
       
@@ -542,6 +563,6 @@ int main( int argc, char** argv )
       if (!methodList.IsNull()) methodList += TString(",");
       methodList += regMethod;
    }
-   TMVAClassificationApplication(methodList);
+   TMVAClassificationApplication2nd(methodList);
    return 0;
 }
