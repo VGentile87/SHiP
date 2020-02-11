@@ -1,4 +1,4 @@
-CREATED BY V.GENTILE 2020/10/02
+CREATED BY V.GENTILE (2020/10/02)
 
 Script name: vtx_MC_analysis.C 
 Description: Code for the identification of vertices reconstructed by FEDRA using a MC simulation.
