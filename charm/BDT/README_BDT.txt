@@ -25,7 +25,8 @@ List of functions:
 				        decay search.
 					Different cases are possible:
 					Case 1: BDT on interaction vertices --> Input files like "tmva_input_vertices.root".
-					Case 2: BDT on decay vertices --> 2 Input files like "tmva_input_vertices2nd.root" for the signal 						(charm vertices) and the background (the remaining part).
+					Case 2: BDT on decay vertices --> 2 Input files like "tmva_input_vertices2nd.root" for the signal 
+					(charm vertices) and the background (the remaining part).
 					Case 3: BDT for the decay search --> Input files like "tmva_input_verticesDS.root".
 					It provides in output the directories with the datasets with the weigths of the tested network and 
 					the "TMVA.root" to check the BDT results and distributions.
