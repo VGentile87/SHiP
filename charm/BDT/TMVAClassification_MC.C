@@ -259,7 +259,7 @@ void prepareTMVAtree(){
     maxaperture = *maxap;
     probability = *prob;
     
-    if(flag!=2 && flag!=5 && vz<-4000){ // TOPOLOGIC CUT
+    if(flag!=2 && flag!=5 && vz<-3000){ // TOPOLOGIC CUT
       
       int index_tracks=0;
       
@@ -363,40 +363,39 @@ void prepareTMVAtree2nd(){
    TTreeReaderValue<int> mpmother(vtxreader,"mp_motherID");
    //TTreeReaderValue<bool> charmdaug(vtxreader,"charm_daug");    //no POT
    TTreeReaderValue<float> bdt_value(mckreader,"bdt_value");
-   TTreeReaderValue<int> bdt_v(mckreader,"bdt_vID");
-   TTreeReaderValue<float> mean_nseg(mckreader,"meannseg");
+   TTreeReaderValue<int> bdt_vID(mckreader,"bdt_vID");
   
-  Char_t vtx_good;
-  Int_t vID, mp_pdgID,ntracks,mp_motherID,flag, mp_eventID;
-  Float_t bdt_val;
-  Float_t meanTX, meanTY,meannseg, maxaperture, probability,vx,vy,vz;
-  Float_t maxIP, meanIP, vtx_node, vtx_holes, vtx_gap, vtx_fill;
-  float mean_rms_ip=0;
-  float mean_rms_kink=0;
-  
-  const Int_t maxtracks = 1000; //I do not expect a larger number of tracks than this
-  const Int_t maxseg=30;
-  Int_t incoming[maxtracks], trk_num_holes[maxtracks], trk_max_gap[maxtracks];
-  Float_t t_eTX[maxtracks], t_eTY[maxtracks],  trackfill[maxtracks],impactparameter[maxtracks];
-  Int_t s_ePID[maxseg], t__;
-  Bool_t charm_daug;
-
-  float cut_bdt_val;
-  cout << "Inserire cut BDT interaction ";
-  cin >> cut_bdt_val;
-  cout << endl;
-
-  TString outfileName("");
-  switch(choice){
-  case 1:
-    outfileName = "tmva_input_vertices2nd.root";
-    break;
-  case 2:
-    outfileName = "tmva_input_vertices2nd_POT.root";
-    break;
-  }
-  
-  TFile * outputfile = new TFile(outfileName,"RECREATE");
+   Char_t vtx_good;
+   Int_t vID, mp_pdgID,ntracks,mp_motherID,flag, mp_eventID, bdt_vtxID;
+   Float_t bdt_val;
+   Float_t meanTX, meanTY,meannseg, maxaperture, probability,vx,vy,vz;
+   Float_t maxIP, meanIP, vtx_node, vtx_holes, vtx_gap, vtx_fill;
+   float mean_rms_ip=0;
+   float mean_rms_kink=0;
+   
+   const Int_t maxtracks = 1000; //I do not expect a larger number of tracks than this
+   const Int_t maxseg=30;
+   Int_t incoming[maxtracks], trk_num_holes[maxtracks], trk_max_gap[maxtracks];
+   Float_t t_eTX[maxtracks], t_eTY[maxtracks],  trackfill[maxtracks],impactparameter[maxtracks];
+   Int_t s_ePID[maxseg], t__;
+   Bool_t charm_daug;
+   
+   float cut_bdt_val;
+   cout << "Inserire cut BDT interaction ";
+   cin >> cut_bdt_val;
+   cout << endl;
+   
+   TString outfileName("");
+   switch(choice){
+   case 1:
+     outfileName = "tmva_input_vertices2nd.root";
+     break;
+   case 2:
+     outfileName = "tmva_input_vertices2nd_POT.root";
+     break;
+   }
+   
+   TFile * outputfile = new TFile(outfileName,"RECREATE");
   TTree *outputvtx = new TTree("vertices","Input file for TMVA analysis");
   
   outputvtx->Branch("vtx_good",&vtx_good,"vtx_good/B");
@@ -422,11 +421,27 @@ void prepareTMVAtree2nd(){
   outputvtx->Branch("bdt_value",&bdt_val,"bdt_value/F");
   
   const Int_t nvertices = vtxreader.GetEntries();
+  const Int_t nvtx = vtxreader.GetTree()->GetMaximum("vID");
+
+  float BDT1_val[nvtx];
+  for (int ivtx=0;ivtx<nvtx;ivtx++){
+    BDT1_val[ivtx]=-1;   
+  }
+
+  const Int_t nbdt1 = mckreader.GetEntries();
+  
+  for (int ivtx=0;ivtx<nbdt1;ivtx++){
+    mckreader.Next();
+    bdt_val = *bdt_value;
+    bdt_vtxID = *bdt_vID;
+    //cout << bdt_vtxID << " " << bdt_val << endl;
+    BDT1_val[bdt_vtxID]=bdt_val;
+  }
   
   for (int ivtx=0;ivtx<nvertices;ivtx++){
 
     vtxreader.Next();
-    mckreader.Next();
+    //mckreader.Next();
     
     meanTX = 0.;
     meanTY = 0.;
@@ -453,8 +468,8 @@ void prepareTMVAtree2nd(){
     
     maxaperture = *maxap;
     probability = *prob;
-    bdt_val = *bdt_value;
-    meannseg = *mean_nseg;
+    //bdt_val = *bdt_value;
+    bdt_val = BDT1_val[vID];
     
     int sum_seg=0;
     int index_tracks=0;
@@ -473,6 +488,7 @@ void prepareTMVAtree2nd(){
 	float trk_kink_random[3]={};
 	float trk_fill=0;
 	meannseg = meannseg + nseg[itrk];
+	//cout << meannseg << " " << nseg[itrk] << endl;
 	meanTX = meanTX + tracks[itrk].TX();
 	meanTY = meanTY + tracks[itrk].TY();
 	meanIP = meanIP + IP[itrk];
@@ -554,9 +570,9 @@ void prepareTMVAtree2nd(){
 
 void prepareTMVAtreeDS(){
 
-  using T = int;
-  using V = std::vector<T>;
-  using VC = std::vector<T,ROOT::Detail::VecOps::RAdoptAllocator<T>>;
+  //using T = int;
+  //using V = std::vector<T>;
+  //using VC = std::vector<T,ROOT::Detail::VecOps::RAdoptAllocator<T>>;
 
  
   TFile *f = TFile::Open("annotated_ds_data_result_testshower_v4_full.root");
@@ -722,8 +738,6 @@ void prepareTMVAtreeDS(){
 
       dist_tr = TMath::Sqrt(TMath::Power(Vtx2_x[ivtx2]-vtx_x,2)+TMath::Power(Vtx2_y[ivtx2]-vtx_y,2));
 
-     
-      
       decaylength = Decaylength[ivtx2];
       vtx2_id = Vtx_id2[ivtx2];
       vtx2_bdt2 = Vtx2_bdt2[ivtx2];
@@ -742,65 +756,53 @@ void prepareTMVAtreeDS(){
       
       
       for(int k=0;k<ntrk[ivtx2];k++){
-
-	//	if(Trk_incoming[sum_trk+k]==1){
-	  
-	  nseg = Nseg[sum_trk+k];
-	  meannseg +=nseg;
-	  
-	  kink += ka[sum_trk+k];
-	  impact += ip[sum_trk+k];
-	  
-	  //cout << kink << " " << impact <<  endl;
-	  
-	  tka_rms += Tka_rms[sum_trk+k]*nseg;
-	  tka_mean += Tka_mean[sum_trk+k]*nseg;
-	  tka_max += Tka_max[sum_trk+k]*nseg;
-
-	  // SHOWER
-	  if(Out15[sum_trk+k]!=-10){
-	    trk_shower_val15 += Out15[sum_trk+k];
-	    trk_nshower += Nshower[sum_trk+k];
-	    trk_sizeb += Sizeb[sum_trk+k];
-	    shower_val15[index_shower15] = Out15[sum_trk+k];
-	    index_shower15++;
-	  }
-
-	  if(Out30[sum_trk+k]!=-10){
-	    trk_shower_val30 += Out30[sum_trk+k];
-	    index_shower30++;
-	  }
-
-	  if(trk_shower_val15>0.5)trk_shower++;
-	  //if(trk_shower_val15==-10)trk_not_shower=-1;
-
-	  
-	  // // //
-	  
-	  trk_z = Trk_z[sum_trk+k];
-	  if((trk_z-vtx_z)>0)goodvtx=1;
-	  float vtrk_pms = Trk_pms[sum_trk+k];
-	  if(vtrk_pms==-99)vtrk_pms=10;
-	  if(vtrk_pms==-1)vtrk_pms=0;
-	  trk_pms += vtrk_pms;
-	  if(Trk_pid[sum_trk+k]==1)charm1=1;
-	  if(Trk_pid[sum_trk+k]==2)charm2=1;
-	  
-	  float plate_step=1300;
-	  int remaining_plates = floor(TMath::Abs(vtx2_z)/plate_step) + 1;
-	  if(remaining_plates!=0){
-	    trk_fill = (float) (nseg) /(float) (remaining_plates);
-	  }
-	  else trk_fill=0;
-	  
-	  cout << trk_fill << " " << remaining_plates << " " << nseg  << endl;
-	  
-	  //if(trk_fill<meanfillmin)meanfillmin=trk_fill;
-	  //if(trk_fill>meanfillmax)meanfillmax=trk_fill;
-        meanfill += trk_fill;
-
-
-
+	
+	nseg = Nseg[sum_trk+k];
+	meannseg +=nseg;
+	
+	kink += ka[sum_trk+k];
+	impact += ip[sum_trk+k];
+	
+	//cout << kink << " " << impact <<  endl;
+	
+	tka_rms += Tka_rms[sum_trk+k]*nseg;
+	tka_mean += Tka_mean[sum_trk+k]*nseg;
+	tka_max += Tka_max[sum_trk+k]*nseg;
+	
+	// SHOWER
+	if(Out15[sum_trk+k]!=-10){
+	  trk_shower_val15 += Out15[sum_trk+k];
+	  trk_nshower += Nshower[sum_trk+k];
+	  trk_sizeb += Sizeb[sum_trk+k];
+	  shower_val15[index_shower15] = Out15[sum_trk+k];
+	  index_shower15++;
+	}
+	
+	if(Out30[sum_trk+k]!=-10){
+	  trk_shower_val30 += Out30[sum_trk+k];
+	  index_shower30++;
+	}
+	
+	if(trk_shower_val15>0.5)trk_shower++;
+		
+	trk_z = Trk_z[sum_trk+k];
+	if((trk_z-vtx_z)>0)goodvtx=1;
+	float vtrk_pms = Trk_pms[sum_trk+k];
+	if(vtrk_pms==-99)vtrk_pms=10;
+	if(vtrk_pms==-1)vtrk_pms=0;
+	trk_pms += vtrk_pms;
+	if(Trk_pid[sum_trk+k]==1)charm1=1;
+	if(Trk_pid[sum_trk+k]==2)charm2=1;
+	
+	float plate_step=1300;
+	int remaining_plates = floor(TMath::Abs(vtx2_z)/plate_step) + 1;
+	if(remaining_plates!=0){
+	  trk_fill = (float) (nseg) /(float) (remaining_plates);
+	}
+	else trk_fill=0;
+	
+	meanfill += trk_fill;
+	
 	// MAX APERTURE
 	for(int j=(k+1);j<ntrk[ivtx2];j++){
 	  float dtx= TX[sum_trk+j] - TX[sum_trk+k];
@@ -812,15 +814,12 @@ void prepareTMVAtreeDS(){
 	
 	
 	ntracks++;
-	//	}
       }
       
       kink /= ntracks;
       impact /= ntracks;
-      //trk_pms /= ntracks;
       meanfill /= ntracks;
-      //meanfill = meanfillmax - meanfillmin;
-
+      
       if(index_shower15!=0){
 	trk_shower_val15 /= index_shower15;
 	trk_nshower /= index_shower15;
@@ -831,19 +830,16 @@ void prepareTMVAtreeDS(){
 	trk_nshower=0;
 	trk_sizeb=0;
       }
-
+      
       if(index_shower30!=0)trk_shower_val30 /= index_shower30;
       else trk_shower_val30=0;
-      
-      // cout << "MEANFILL " << meanfill << endl;
       
       tka_rms /= meannseg;
       tka_mean /= meannseg;
       tka_max /= meannseg;
-      
-      
-      meannseg /=vtx2_ntrk;
 
+      meannseg /=vtx2_ntrk;
+      
       trk_shower_mean = TMath::Mean(index_shower15,shower_val15);
       trk_shower_rms = TMath::RMS(index_shower15,shower_val15);
       trk_shower_min = TMath::MinElement(index_shower15,shower_val15);
@@ -1114,9 +1110,16 @@ int TMVAClassification_MC( TString myMethodList = "" )
   case 1:
     //signalTree = sampleTree->CopyTree("mp_motherID==-1");
     //backgroundTree = sampleTree->CopyTree("!(mp_motherID==-1)");
+    int cut_ntrk;
+    float cut_vz;
+    cout << "Inserisci cut numero minimo di tracce ";
+    cin >> cut_ntrk;
+    cout << "Inserisci cut superiore in Vz ";
+    cin >> cut_vz;
+    cout << endl;
     outputFile->SetName(outfileName);
-    signalTree = sampleTree->CopyTree("mp_motherID==0");
-    backgroundTree = sampleTree->CopyTree("!(mp_motherID==0)");
+    signalTree = sampleTree->CopyTree(Form("mp_motherID==0 && ntracks>=%d && vz<%.2f",cut_ntrk,cut_vz));
+    backgroundTree = sampleTree->CopyTree(Form("!(mp_motherID==0 && ntracks>=%d && vz<%.2f)",cut_ntrk,cut_vz));
     break;
   case 2:
     // escludo primari
@@ -1174,7 +1177,7 @@ int TMVAClassification_MC( TString myMethodList = "" )
     dataloader->AddVariable("probability", 'F');
     dataloader->AddVariable("maxaperture", 'F');   // tutto
     dataloader->AddVariable("IP_var := meanIP/maxIP",'F');
-    dataloader->AddVariable("fill:=vtx_fill*ntracks",'F');
+    //dataloader->AddVariable("fill:=vtx_fill/ntracks",'F');
     break;
     //
   case 2:
@@ -1288,12 +1291,13 @@ int TMVAClassification_MC( TString myMethodList = "" )
   case 1:
     // CUT TUTTO
     dataloader->PrepareTrainingAndTestTree( mycuts, mycutb,
-					    "nTrain_Signal=1088:nTrain_Background=14426:SplitMode=Random:NormMode=NumEvents:!V" );
+					    //"nTrain_Signal=1088:nTrain_Background=14426:SplitMode=Random:NormMode=NumEvents:!V" );
+					    "nTrain_Signal=979:nTrain_Background=15493:SplitMode=Random:NormMode=NumEvents:!V" );
     break;//(1042,12156)
   case 2:
   // CUT ESCLUSI PRIMARI
     dataloader->PrepareTrainingAndTestTree( mycuts, mycutb,
-					    "nTrain_Signal=1463:nTrain_Background=12853:SplitMode=Random:NormMode=NumEvents:!V" );
+					    "nTrain_Signal=1103:nTrain_Background=12100:SplitMode=Random:NormMode=NumEvents:!V" );
     break;
   case 3:
     

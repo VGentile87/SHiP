@@ -145,7 +145,7 @@ void TMVAClassificationApplication( TString myMethodList = "" )
    reader->AddVariable("maxaperture", &maxaperture);  // tutto
    //reader->AddVariable("meannseg",&meannseg);  // escluso primari
    reader->AddVariable("IP_var := meanIP/maxIP",&varIP);
-   reader->AddVariable("fill:=vtx_fill*ntracks",&fill);
+   //reader->AddVariable("fill:=vtx_fill/ntracks",&fill);
    
    
    
