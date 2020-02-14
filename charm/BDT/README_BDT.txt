@@ -81,6 +81,10 @@ prepareTMVAtreeDS()
 # BDTs training and test
 root -l ./TMVAClassification_MC.C\(\"BDT,Likelihood\"\)
 
+# BDT evaluation
+root -l TMVAClassificationApplication.C 
+root -l TMVAClassificationApplication2nd.C 
+
 # BDT results
 root -l
 TMVA::TMVAGui("TMVA.root")
