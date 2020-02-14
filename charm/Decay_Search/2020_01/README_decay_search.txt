@@ -7,7 +7,7 @@ Script name: Definitions.h
 Description: Header file where track and vertex variables and trees are declared.
 
 Script name: DsCuts.h
-Description: Datacard where cuts for the DS are defined
+Description: Datacard where cuts for the DS are defined (some cuts depends on dataset and should be set here)
 
 Script name: vtx_data_study.C 
 Description: Code for the DS which requires in input the following files:
@@ -36,6 +36,7 @@ Usage:
 root -l
 .L vtx_data_study.C
 myrun()
+(type 2 for the decay search)
 
 # new selections
 root -l selection_decaysearch_sim.C
