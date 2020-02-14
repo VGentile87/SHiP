@@ -2,6 +2,7 @@ CREATED BY V.GENTILE (2020/10/02)
 
 Script name: Definitions.h 
 Description: Header file where simulation and vertex variables and trees are declared.
+	     The name of the simulation files needs to be set here.
 
 Script name: vtx_MC_analysis.C 
 Description: Code for the identification of vertices reconstructed by FEDRA using a MC simulation.
