@@ -1270,7 +1270,7 @@ void Loop()
   log_decay.open("log_ds_search.txt",ios::out);
   log_decay << "//----V. GENTILE ------// \n SEARCH OF CHARM VERTEX DECAY" << endl;
 
-  TFile * fedrafile = TFile::Open("vertextree_test.root");  // full
+  TFile * fedrafile = TFile::Open("vertextree.root");  // full
   TFile * trackfile = TFile::Open("linked_tracks.root");  // full
   TFile * bdtfile = TFile::Open("vtx_BDT_data_evaluated.root");  // full
   TFile * bdtfile2 = TFile::Open("vtx_BDT_data_evaluated2nd.root");  // no primary

@@ -1,0 +1,6 @@
+// ROOT TERMINAL COMMANDS
+
+// list of survived vertices
+((TTreePlayer*)(bdt->GetPlayer()))->SetScanRedirect(true);
+((TTreePlayer*)(bdt->GetPlayer()))->SetScanFileName("vtx_list.txt");
+bdt->Scan("vtx_id:vtx2_id:bdt_value");

@@ -131,8 +131,10 @@ void prepareTMVAtree(){
   TFile *f2(0);
    TFile *f(0);
    TString f_name="";
-   
-   f_name = "../vertextree_test.root";
+   //cout << "Inserire nome file vertici: " << endl;
+   //cin >> f_name;
+   //cout << endl;
+   f_name = "../vertextree.root";
    f = TFile::Open( f_name );
    if(!f){
      std::cout << "ERROR: could not open data file" << std::endl;
@@ -272,7 +274,7 @@ void prepareTMVAtree2nd(){
   TString f_name="";
   TString f2_name="";
   f2_name = "vtx_BDT_data_evaluated.root";     // tutto
-  f_name = "../vertextree_test.root";
+  f_name = "../vertextree.root";
   f = TFile::Open( f_name );
   f2 = TFile::Open( f2_name );
   if(!f || !f2) {
@@ -484,8 +486,6 @@ void prepareTMVAtree2nd(){
   
 }
 
-
-
 void prepareTMVAtreeDS(){
 
   //using T = int;
@@ -493,9 +493,9 @@ void prepareTMVAtreeDS(){
   //using VC = std::vector<T,ROOT::Detail::VecOps::RAdoptAllocator<T>>;
 
  
-  TFile *f = TFile::Open("annotated_ds_data_result_testshower_v4_full.root");
+  TFile *f = TFile::Open("annotated_ds_data_result.root");
   TTreeReader dsreader("ds",f);
-  TTreeReader dsshower("dsshower",f);
+  //TTreeReader dsshower("dsshower",f);
  
   TTreeReaderValue<int> Vtx_id1(dsreader,"vtx_fe_id");
   TTreeReaderValue<int> Vtx_mc_ev(dsreader,"vtx_mc_ev");
@@ -538,10 +538,10 @@ void prepareTMVAtreeDS(){
   TTreeReaderValue<float> Vtx_bdt1(dsreader,"vtx_bdt1");
   TTreeReaderValue<int> Vtx_ntrk(dsreader,"vtx_ntrk");
   TTreeReaderValue<float> Vtx_maxaperture(dsreader,"vtx_maxap");
-  TTreeReaderArray<float> Out15(dsshower,"dsvtx_vtx2_trk_output15");
-  TTreeReaderArray<float> Out30(dsshower,"dsvtx_vtx2_trk_output30");
-  TTreeReaderArray<int> Nshower(dsshower,"dsvtx_vtx2_trk_nshower");
-  TTreeReaderArray<int> Sizeb(dsshower,"dsvtx_vtx2_trk_sizeb");
+  //TTreeReaderArray<float> Out15(dsshower,"dsvtx_vtx2_trk_output15");
+  //TTreeReaderArray<float> Out30(dsshower,"dsvtx_vtx2_trk_output30");
+  //TTreeReaderArray<int> Nshower(dsshower,"dsvtx_vtx2_trk_nshower");
+  //TTreeReaderArray<int> Sizeb(dsshower,"dsvtx_vtx2_trk_sizeb");
   
   int nseg, ntracks, npl, nholes, maxgap, event, charm1, charm2, vtx_ntrk, starting2, incoming;
   int zpositive, samevent,charmdaughter, vtx_id, vtx2_id, trk_id, vtx_mc_ev, vtx2_mc_ev, trk_pid, trk_mc_id, goodvtx, vtx2_ntrk, trk_nshower, trk_sizeb, trk_shower;
@@ -582,26 +582,27 @@ void prepareTMVAtreeDS(){
   outputvtx->Branch("vtx2_y",&vtx2_y,"vtx2_y/F");
   outputvtx->Branch("vtx2_z",&vtx2_z,"vtx2_z/F");
   outputvtx->Branch("vtx2_prob",&vtx2_prob,"vtx2_prob/F");
+  outputvtx->Branch("vtx2_maxap",&vtx2_maxap,"vtx2_maxap/F");
   outputvtx->Branch("tka_rms",&tka_rms,"tka_rms/F");
   outputvtx->Branch("tka_mean",&tka_mean,"tka_mean/F");
   outputvtx->Branch("tka_max",&tka_max,"tka_max/F");
   outputvtx->Branch("trk_pms",&trk_pms,"trk_pms/F");
   outputvtx->Branch("tkr_sizeb",&trk_sizeb,"trk_sizeb/I");
-  outputvtx->Branch("tkr_nshower",&trk_nshower,"trk_nshower/I");
+  /*outputvtx->Branch("tkr_nshower",&trk_nshower,"trk_nshower/I");
   outputvtx->Branch("tkr_shower_val15",&trk_shower_val15,"trk_shower_val15/F");
   outputvtx->Branch("tkr_shower_val30",&trk_shower_val30,"trk_shower_val30/F");
   outputvtx->Branch("tkr_shower_mean",&trk_shower_mean,"trk_shower_mean/F");
   outputvtx->Branch("tkr_shower_rms",&trk_shower_rms,"trk_shower_rms/F");
   outputvtx->Branch("tkr_shower_min",&trk_shower_min,"trk_shower_min/F");
   outputvtx->Branch("tkr_shower_max",&trk_shower_max,"trk_shower_max/F");
-  outputvtx->Branch("tkr_shower",&trk_shower,"trk_shower/I");
-  outputvtx->Branch("vtx2_maxap",&vtx2_maxap,"vtx2_maxap/F");
+  outputvtx->Branch("tkr_shower",&trk_shower,"trk_shower/I");*/
+  
 
   const Int_t nvtx = dsreader.GetEntries();
   //cout << nvertices << endl;
   for (int ivtx=0;ivtx<nvtx;ivtx++){
     dsreader.Next();
-    dsshower.Next();
+    //dsshower.Next();
     event = *Event;
     vtx_mc_ev = *Vtx_mc_ev;
     vtx_ntrk = *Vtx_ntrk;
@@ -630,7 +631,8 @@ void prepareTMVAtreeDS(){
       tka_max=0;
       meannseg=0;
       meanfill=0;
-
+      vtx2_maxap=0;
+      /*
       trk_shower_val15=0;
       trk_shower_val30=0;
       trk_nshower=0;
@@ -640,8 +642,9 @@ void prepareTMVAtreeDS(){
       trk_shower_rms=0;
       trk_shower_min=0;
       trk_shower_max=0;
-      trk_shower=0;
-      vtx2_maxap=0;
+      trk_shower=0
+      
+      */
 
       float shower_info[3]={};
       float shower_val15[ntrk[ivtx2]];
@@ -653,7 +656,7 @@ void prepareTMVAtreeDS(){
       trk_shower=0;
       int index_shower15=0;
       int index_shower30=0;
-
+      
       dist_tr = TMath::Sqrt(TMath::Power(Vtx2_x[ivtx2]-vtx_x,2)+TMath::Power(Vtx2_y[ivtx2]-vtx_y,2));
 
       decaylength = Decaylength[ivtx2];
@@ -686,7 +689,8 @@ void prepareTMVAtreeDS(){
 	tka_rms += Tka_rms[sum_trk+k]*nseg;
 	tka_mean += Tka_mean[sum_trk+k]*nseg;
 	tka_max += Tka_max[sum_trk+k]*nseg;
-	
+
+	/*
 	// SHOWER
 	if(Out15[sum_trk+k]!=-10){
 	  trk_shower_val15 += Out15[sum_trk+k];
@@ -702,7 +706,8 @@ void prepareTMVAtreeDS(){
 	}
 	
 	if(trk_shower_val15>0.5)trk_shower++;
-		
+	*/
+	
 	trk_z = Trk_z[sum_trk+k];
 	if((trk_z-vtx_z)>0)goodvtx=1;
 	float vtrk_pms = Trk_pms[sum_trk+k];
@@ -737,7 +742,16 @@ void prepareTMVAtreeDS(){
       kink /= ntracks;
       impact /= ntracks;
       meanfill /= ntracks;
-      
+
+            
+      tka_rms /= meannseg;
+      tka_mean /= meannseg;
+      tka_max /= meannseg;
+
+      meannseg /=vtx2_ntrk;
+
+      /*
+      // SHOWER
       if(index_shower15!=0){
 	trk_shower_val15 /= index_shower15;
 	trk_nshower /= index_shower15;
@@ -751,18 +765,13 @@ void prepareTMVAtreeDS(){
       
       if(index_shower30!=0)trk_shower_val30 /= index_shower30;
       else trk_shower_val30=0;
-      
-      tka_rms /= meannseg;
-      tka_mean /= meannseg;
-      tka_max /= meannseg;
 
-      meannseg /=vtx2_ntrk;
       
       trk_shower_mean = TMath::Mean(index_shower15,shower_val15);
       trk_shower_rms = TMath::RMS(index_shower15,shower_val15);
       trk_shower_min = TMath::MinElement(index_shower15,shower_val15);
       trk_shower_max = TMath::MaxElement(index_shower15,shower_val15);
-      
+      */
       outputvtx->Fill();
 
       sum_trk += vtx2_ntrk;
@@ -775,6 +784,7 @@ void prepareTMVAtreeDS(){
   outputfile->Close();
   
 }
+
 
 
 
