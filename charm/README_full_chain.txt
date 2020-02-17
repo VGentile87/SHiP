@@ -4,7 +4,7 @@
 	
 	2) Copiare i seguenti file:
 		- linked_tracks.root
-		- vertextree_test.root
+		- vertextree.root
 		- DSCuts.h
 		- Definitions.h
 		- vtx_data_study.C
@@ -28,7 +28,7 @@
 		- TMVAClassificationApplication.C
 		- TMVAClassificationApplication2nd.C
 		- TMVAClassificationApplicationDS.C
-		- reader_evaluation_Anto_vtx.C
+		- reader_evaluation_vtx.C
 
 
 	6) Comandi per la BDT vtx interazione:
@@ -92,9 +92,13 @@
 
 	13) Lanciare script per efficienze e stime numeriche:
 
-		- root -l reader_evaluation_data.C
+		- root -l reader_evaluation_vtx.C
 		- settare numero vertici e/o eventi simulati
 
-		fornisce in uscita "log_DS_results.txt"
+		fornisce in uscita:
+			
+		"log_DS_results.txt"  (efficienze e conteggi)
+		"vtx_list.txt"  (lista dei vertici sopravvissuti)
+				
 
 

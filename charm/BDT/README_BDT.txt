@@ -84,6 +84,7 @@ root -l ./TMVAClassification_MC.C\(\"BDT,Likelihood\"\)
 # BDT evaluation
 root -l TMVAClassificationApplication.C 
 root -l TMVAClassificationApplication2nd.C 
+root -l TMVAClassificationApplicationDS.C 
 
 # BDT results
 root -l
