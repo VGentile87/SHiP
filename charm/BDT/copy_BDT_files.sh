@@ -1,0 +1,8 @@
+#!/bin/bash   # CREATED BY V.GENTILE
+#
+#
+ln -s $CHARM/BDT/dataset_* .
+ln -s $CHARM/BDT/TMVAClassificationApplication* .
+ln -s $CHARM/BDT/TMVAClassification.C .
+ln -s $CHARM/BDT/start_BDT.sh .
+ln -s $CHARM/BDT/make_plot.sh .
