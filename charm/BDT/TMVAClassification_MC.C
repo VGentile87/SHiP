@@ -267,8 +267,8 @@ void prepareTMVAtree(){
 	      	
 	float trk_fill=0;
 	meannseg = meannseg + nseg[itrk];
-	meanTX = meanTX + tracks[itrk].TX();
-	meanTY = meanTY + tracks[itrk].TY();
+	//meanTX = meanTX + tracks[itrk].TX();
+	//meanTY = meanTY + tracks[itrk].TY();
 	meanIP = meanIP + IP[itrk];
 	if (maxIP < IP[itrk]) maxIP = IP[itrk];
 	
@@ -283,7 +283,7 @@ void prepareTMVAtree(){
 	
 	vtx_fill += trk_fill; 
 	
-      }
+	}
       
       meannseg = (Float_t)(meannseg/(ntracks));
       meanTX = (Float_t)(meanTX/(ntracks));
@@ -292,7 +292,7 @@ void prepareTMVAtree(){
       vtx_fill = (Float_t)(vtx_fill/(index_tracks));
       
       outputvtx->Fill();
-    } // flag statement
+      } // flag statement
   }
   //f->Close();
   outputfile->Write();

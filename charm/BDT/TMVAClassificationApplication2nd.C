@@ -30,7 +30,7 @@
 
 using namespace TMVA;
 
-void TMVAClassificationApplication2nd( TString myMethodList = "" )
+void TMVAClassificationApplication2nd( int choice=-1, TString myMethodList = "" )
 {
 
    //---------------------------------------------------------------
@@ -294,11 +294,11 @@ void TMVAClassificationApplication2nd( TString myMethodList = "" )
    // we'll later on use only the "signal" events for the test in this example.
    //
 
-   int choice=0;
-   
-   cout << "Scegli il tipo di dataset (1: CHARM simulation; 2: BACKGROUND simulation) \t";
-   cin >> choice;
-   cout << endl;
+   if(choice==-1){
+     cout << "Scegli il tipo di dataset (1: CHARM simulation; 2: BACKGROUND simulation) \t";
+     cin >> choice;
+     cout << endl;
+   }
    
    TFile *input(0);
    
@@ -563,6 +563,6 @@ int main( int argc, char** argv )
       if (!methodList.IsNull()) methodList += TString(",");
       methodList += regMethod;
    }
-   TMVAClassificationApplication2nd(methodList);
+   TMVAClassificationApplication2nd(-1,methodList);
    return 0;
 }

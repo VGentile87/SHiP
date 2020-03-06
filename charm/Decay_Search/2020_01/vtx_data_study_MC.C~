@@ -1,0 +1,2280 @@
+// Classificazione dei vertici simulati ricostruiti in FEDRA
+// Training per analisi multivariata
+// V. Gentile 2019
+//
+
+#include "Definitions.h"
+#include "DsCuts.h"
+#include <TH2.h>
+#include <TH3F.h>
+#include <TStyle.h>
+#include <TCanvas.h>
+#include <vector>
+#include <iostream>
+#include <iomanip>
+#include <locale>
+#include <sstream>
+#include <string>
+#include <fstream>
+#include <algorithm>
+#include <numeric>
+#include <stdio.h>
+#include <TF1.h>
+#include <TStyle.h>
+
+#include <TGraph.h>
+#include <TGraph2D.h>
+#include <TMultiGraph.h>
+#include <TMath.h>
+#include <TRandom3.h>
+#include <TSystem.h>
+#include <TLine.h>
+#include <TGraph.h>
+#include <TF1.h>
+#include <TTree.h>
+#include <TFile.h>
+#include <TTreeReader.h>
+#include <TTreeReaderArray.h>
+#include <TObjArray.h>
+
+#include <TParticlePDG.h>
+#include <TPDGCode.h>
+#include <TDatabasePDG.h>
+
+#include <EdbVertex.h>
+#include <EdbPattern.h>
+#include <EdbDisplay.h>
+#include <EdbSegP.h>
+#include <EdbLog.h>
+#include <EdbMomentumEstimator.h>
+
+#define gEDBDEBUGLEVEL 0
+#define EVERBOSE 0
+
+#include <algorithm>    // std::equal
+#include <vector>       // std::vector
+
+using namespace std;
+
+
+// OUTPUT FILE STRUCTURE
+
+struct Vertex
+{
+  Int_t  event;   // index of the tree
+  Int_t charm;
+  Int_t fe_id;  // fedra_id
+  Int_t ntrk;   // number of tracks attached to the vertex
+  Int_t flag;
+  Float_t maxap;
+  Float_t prob;
+  //Int_t mc_nd[2] ; // number montecarlo charged daugthers
+  //Float_t mc_dz[2];   // delta z between charm and primary vertex
+  //Float_t mc_dl[2];   // decay length between charm and primary vertex
+  Float_t x;
+  Float_t y;
+  Float_t z;
+  Int_t mc_id;  // monte carlo id
+  Int_t mc_parent; // monte carlo parent
+  Int_t mc_mult; // monte carlo number of daugthers;
+  Float_t mc_dlen; // monte carlo decay length;
+  //Bool_t vtx_only; // vertex only 1 time;
+  Float_t mean_ip;
+  Float_t bdt1;
+  };
+  
+struct Track
+{
+  Int_t itrk;                     // index on tracks
+  vector<int> icharm;                   // monte carlo charm id 
+  vector<int> fe_id;                    // index fedra
+  vector<float> vip;              // vtx impact parameter 
+  vector<float> vka;              // vtx kink angle
+  vector<float> iseg_ip;
+  vector<float> tip;              // trk impact parameter
+  vector<float> iseg_ka;
+  vector<float> tka;              // trk kink angle
+  vector<int> nseg;               // number of segments
+  vector<int> npl;               // number of plates
+  vector<int> nholes;            // number of holes
+  vector<int> maxgap;            // max number of consecutive holes
+  vector<int> type;               // 0 - track alone, 1 - in primary vtx, 2 - in other vtx same event, 3 - in other vtx, 4 - fake vertex
+  vector<float> x;              // xpos
+  vector<float> y;              // ypos
+  vector<float> z;              // zpos
+  vector<float> tx;              // tx
+  vector<float> ty;              // ty
+  vector<int> mc_id;                    // monte carlo id (obsoleto)
+  vector<int> mc_pdg;                   // monte carlo pdg (obsoleto)
+  vector<int> mc_ev;
+  vector<int> mc_tid;
+  vector<int> mc_pid;
+  vector<int> incoming;
+  //vector<double> min_xy;
+  //vector<double> min_xyz;
+  //vector<int> frd_xy;
+  //vector<int> frd_xyz;
+};
+
+/*
+struct ExtraTrack
+{
+  Int_t itrk;
+  vector<int> icharm;                   // monte carlo charm id 
+  vector<int> fe_id;                    // index fedra
+  vector<float> vip;                    // vtx impact parameter 
+  vector<float> vka;                    // vtx kink angle
+  vector<float> iseg_ip;
+  vector<float> tip;                    // trk impact parameter
+  vector<float> iseg_ka;
+  vector<float> tka;              // trk kink angle
+  vector<int> nseg;               // number of segments
+  vector<int> type;               // 0 - track alone, 1 - in primary vtx, 2 - in other vtx same event, 3 - in other vtx, 4 - fake vertex
+  vector<float> x;              // xpos
+  vector<float> y;              // ypos
+  vector<float> z;              // zpos
+  vector<float> tx;              // tx
+  vector<float> ty;              // ty
+  vector<int> mc_id;                    // monte carlo id
+  vector<int> mc_pdg;                   // monte carlo pdg
+};
+*/
+
+struct DSVertex
+{
+  Bool_t charm1;
+  Bool_t charm2;
+  Int_t nfound;
+  Int_t nextrk;
+  Int_t nprg1;
+  Int_t ncls;
+  Int_t nvtx2;
+  Int_t nlip;
+  vector<int> prg1_id;
+  vector<int> lip_id;
+  vector<int> extrk_id;
+  vector<int> vtx2_vid;
+  vector<int> vtx2_tid;
+  vector<int> cls_iclust;
+  vector<int> cls_tid;
+  vector<int> cls_cid;
+  vector<int> cls_ntrk;
+  vector<float> cls_x;
+  vector<float> cls_y;
+  vector<float> cls_z;
+  vector<float> cls_mean_ip;
+  vector<float> cls_mean_ip2v;
+  vector<float> cls_vx;
+  vector<float> cls_vy;
+  vector<float> cls_vz;
+  vector<float> cls_mean_vip;
+  //
+  vector<float> vtx2_vx;
+  vector<float> vtx2_vy;
+  vector<float> vtx2_vz;
+  vector<float> vtx2_dz;
+  vector<int> vtx2_ntrk;
+  vector<int> vtx2_flag;
+  vector<float> vtx2_bdt2;
+  vector<float> vtx2_prob;
+  //
+  vector<float> vtx2_xt;
+  vector<float> vtx2_yt;
+  vector<float> vtx2_zt;
+  vector<float> vtx2_tx;
+  vector<float> vtx2_ty;
+  vector<int> vtx2_tnseg;
+  vector<int> vtx2_npl;
+  vector<int> vtx2_nholes;
+  vector<int> vtx2_maxgap;
+  vector<float> vtx2_vip;
+  vector<float> vtx2_vka;
+  vector<int> vtx2_mc_ev;
+  vector<int> vtx2_mc_tid;
+  vector<int> vtx2_mc_pid;
+  vector<float> vtx2_tip_rms;
+  vector<float> vtx2_tip_mean;
+  vector<float> vtx2_tip_max;
+  vector<float> vtx2_tka_rms;
+  vector<float> vtx2_tka_mean;
+  vector<float> vtx2_tka_max;
+  vector<int> vtx2_incoming;
+  vector<float> vtx2_trk_pms;
+  vector<float> vtx2_trk_pms_ang;
+  vector<float> vtx2_trk_mc_mom;
+  vector<float> vtx2_trk_mc_edep;
+  //
+  vector<float> extrk_xt;
+  vector<float> extrk_yt;
+  vector<float> extrk_zt;
+  vector<float> extrk_tx;
+  vector<float> extrk_ty;
+  vector<int> extrk_tnseg;
+  vector<int> extrk_npl;
+  vector<int> extrk_nholes;
+  vector<int> extrk_maxgap;
+  vector<float> extrk_vip;
+  vector<float> extrk_vka;
+  vector<int> extrk_mc_ev;
+  vector<int> extrk_mc_tid;
+  vector<int> extrk_mc_pid;
+  
+};
+
+Vertex vtx;
+Track trk;
+//ExtraTrack extrk;
+DSVertex dsvtx;
+
+void FillVertex(int ievent, int ife_id, int imc_id, int intrk, float imaxap, float iprob,  float ixv, float iyv, float izv, int imc_parent, int imc_mult, float imc_dlen,  int iflag, bool ivtxonly, int icharm, float imean_ip, float ibdt){
+  vtx.event = ievent;
+  vtx.charm = icharm;
+  vtx.fe_id = ife_id;
+  vtx.mc_id = imc_id;
+  vtx.ntrk = intrk;
+  vtx.maxap = imaxap;
+  vtx.prob = iprob;
+  vtx.x = ixv;
+  vtx.y = iyv;
+  vtx.z = izv;
+  vtx.flag = iflag;
+  vtx.mc_parent = imc_parent;
+  vtx.mc_mult = imc_mult;
+  vtx.mc_dlen = imc_dlen;
+  vtx.mean_ip = imean_ip;
+  vtx.bdt1 = ibdt; 
+  //vtx.vtx_only.push_back(ivtxonly);
+  //cout << "hello " << vtx.event << " " << vtx.fe_id << " " << vtx.mc_id <<  endl;
+  
+}
+void FillTrack(/*int itrk,*/ int iicharm, int ife_id, int imc_id, int imc_pdg, int inseg, int inpl, int inholes, int imaxgap, int itype, float ivip, float ivka, float isegip, float itip, float isegka, float itka, float ixt, float iyt, float izt, float itx, float ity, int imc_ev, int imc_tid, int imc_pid, int iincoming){
+  //trk.itrk = itrk;
+  trk.icharm.push_back(iicharm);
+  trk.fe_id.push_back(ife_id);
+  trk.mc_id.push_back(imc_id);
+  trk.mc_pdg.push_back(imc_pdg);
+  trk.vip.push_back(ivip);
+  trk.iseg_ip.push_back(isegip);
+  trk.iseg_ka.push_back(isegka);
+  trk.vka.push_back(ivka);
+  trk.tip.push_back(itip);
+  trk.tka.push_back(itka);
+  trk.nseg.push_back(inseg);
+  trk.npl.push_back(inpl);
+  trk.nholes.push_back(inholes);
+  trk.maxgap.push_back(imaxgap);
+  trk.type.push_back(itype);
+  trk.x.push_back(ixt);
+  trk.y.push_back(iyt);
+  trk.z.push_back(izt);
+  trk.tx.push_back(itx);
+  trk.ty.push_back(ity);
+  trk.mc_ev.push_back(imc_ev);
+  trk.mc_tid.push_back(imc_tid);
+  trk.mc_pid.push_back(imc_pid);
+  trk.incoming.push_back(iincoming);
+}
+/*
+void FillExtraTrack( int iicharm, int ife_id, int imc_id, int imc_pdg, int inseg,int itype, float ivip, float ivka, float isegip, float itip, float isegka, float itka, float ixt, float iyt, float izt, float itx, float ity){
+  //trk.itrk = itrk;
+  extrk.icharm.push_back(iicharm);
+  extrk.fe_id.push_back(ife_id);
+  extrk.mc_id.push_back(imc_id);
+  extrk.mc_pdg.push_back(imc_pdg);
+  extrk.vip.push_back(ivip);
+  extrk.iseg_ip.push_back(isegip);
+  extrk.iseg_ka.push_back(isegka);
+  extrk.vka.push_back(ivka);
+  extrk.tip.push_back(itip);
+  extrk.tka.push_back(itka);
+  extrk.nseg.push_back(inseg);
+  extrk.type.push_back(itype);
+  extrk.x.push_back(ixt);
+  extrk.y.push_back(iyt);
+  extrk.z.push_back(izt);
+  extrk.tx.push_back(itx);
+  extrk.ty.push_back(ity);
+}*/
+
+void Fill1Prong(/*int iitrk,*/ int ife_id){
+  //prg1.itrk = iitrk;
+  //dsprg1.fe_id.push_back(ife_id);
+  dsvtx.prg1_id.push_back(ife_id);
+}
+
+void FillLargeIP(/*int iitrk,*/ int ife_id){
+  //prg1.itrk = iitrk;
+  //dsprg1.fe_id.push_back(ife_id);
+  dsvtx.lip_id.push_back(ife_id);
+}
+
+void FillCluster(int iiclust, int intrk, float ix, float iy, float iz, float imeanip, float imeanip2v,float ivx, float ivy, float ivz, float imeanvip){
+  /*dscls.iclust = iiclust;
+  dscls.ntrk.push_back(intrk);
+  dscls.mean_ip.push_back(imeanip);
+  dscls.mean_ka.push_back(imeanka);*/
+  dsvtx.cls_iclust.push_back(iiclust);
+  dsvtx.cls_ntrk.push_back(intrk);
+  dsvtx.cls_x.push_back(ix);
+  dsvtx.cls_y.push_back(iy);
+  dsvtx.cls_z.push_back(iz);
+  dsvtx.cls_mean_ip.push_back(imeanip);
+  dsvtx.cls_mean_ip2v.push_back(imeanip2v);
+  dsvtx.cls_vx.push_back(ivx);
+  dsvtx.cls_vy.push_back(ivy);
+  dsvtx.cls_vz.push_back(ivz);
+  dsvtx.cls_mean_vip.push_back(imeanvip);
+  //dsvtx.cls_mean_ka.push_back(imeanka);
+}
+
+void FillClusterTrack(/*int iitrk,*/ int ife_id, int icid){
+  //cls.itrk = iitrk;
+  //dscls.fe_id.push_back(ife_id);
+  dsvtx.cls_tid.push_back(ife_id);
+  dsvtx.cls_cid.push_back(icid);
+}
+
+void Fill2ndVertex(int ife_id,float ix,float iy,float iz, int intrk, float idz, int iflag, float ibdt2, float iprob){
+  //vtx2.ivtx = iivtx;
+  //dsvtx2.fe_vid.push_back(ife_id);
+  dsvtx.vtx2_vid.push_back(ife_id);
+  dsvtx.vtx2_vx.push_back(ix);
+  dsvtx.vtx2_vy.push_back(iy);
+  dsvtx.vtx2_vz.push_back(iz);
+  dsvtx.vtx2_dz.push_back(idz);
+  dsvtx.vtx2_ntrk.push_back(intrk);
+  dsvtx.vtx2_flag.push_back(iflag);
+  dsvtx.vtx2_bdt2.push_back(ibdt2);
+  dsvtx.vtx2_prob.push_back(iprob);
+}
+
+
+void Fill2ndTrack(int ife_id, float ix, float iy, float iz, float itx, float ity, int inseg, int inpl, int inholes, int imaxgap, float iip, float ika, int imc_ev, int imc_tid, int imc_pid, float itiprms, float itipmean, float itipmax,float itkarms, float itkamean, float itkamax, int iincoming, float ipms, float ipms_ang, float imc_mom, float imc_edep){
+  dsvtx.vtx2_tid.push_back(ife_id);
+  dsvtx.vtx2_xt.push_back(ix);
+  dsvtx.vtx2_yt.push_back(iy);
+  dsvtx.vtx2_zt.push_back(iz);
+  dsvtx.vtx2_tx.push_back(itx);
+  dsvtx.vtx2_ty.push_back(ity);
+  dsvtx.vtx2_tnseg.push_back(inseg);
+  dsvtx.vtx2_npl.push_back(inpl);
+  dsvtx.vtx2_nholes.push_back(inholes);
+  dsvtx.vtx2_maxgap.push_back(imaxgap);
+  dsvtx.vtx2_vip.push_back(iip);
+  dsvtx.vtx2_vka.push_back(ika);
+  dsvtx.vtx2_mc_ev.push_back(imc_ev);
+  dsvtx.vtx2_mc_tid.push_back(imc_tid);
+  dsvtx.vtx2_mc_pid.push_back(imc_pid);
+  dsvtx.vtx2_tip_rms.push_back(itiprms);
+  dsvtx.vtx2_tip_mean.push_back(itipmean);
+  dsvtx.vtx2_tip_max.push_back(itipmax);
+  dsvtx.vtx2_tka_rms.push_back(itkarms);
+  dsvtx.vtx2_tka_mean.push_back(itkamean);
+  dsvtx.vtx2_tka_max.push_back(itkamax);
+  dsvtx.vtx2_incoming.push_back(iincoming);
+  dsvtx.vtx2_trk_pms.push_back(ipms);
+  dsvtx.vtx2_trk_pms_ang.push_back(ipms_ang);
+  dsvtx.vtx2_trk_mc_mom.push_back(imc_mom);
+  dsvtx.vtx2_trk_mc_edep.push_back(imc_edep);
+}
+
+void FillDSextrk(int ife_id, float ix, float iy, float iz, float itx, float ity, int inseg, int inpl, int inholes, int imaxgap, float iip, float ika, int imc_ev, int imc_tid, int imc_pid ){
+  dsvtx.extrk_id.push_back(ife_id);
+  dsvtx.extrk_xt.push_back(ix);
+  dsvtx.extrk_yt.push_back(iy);
+  dsvtx.extrk_zt.push_back(iz);
+  dsvtx.extrk_tx.push_back(itx);
+  dsvtx.extrk_ty.push_back(ity);
+  dsvtx.extrk_tnseg.push_back(inseg);
+  dsvtx.extrk_npl.push_back(inpl);
+  dsvtx.extrk_nholes.push_back(inholes);
+  dsvtx.extrk_maxgap.push_back(imaxgap);
+  dsvtx.extrk_vip.push_back(iip);
+  dsvtx.extrk_vka.push_back(ika);
+  dsvtx.extrk_mc_ev.push_back(imc_ev);
+  dsvtx.extrk_mc_tid.push_back(imc_tid);
+  dsvtx.extrk_mc_pid.push_back(imc_pid);
+}
+
+
+//void FillDSextrk(/*int iivtx,*/ int ife_id){
+  //vtx2.ivtx = iivtx;
+  //dsextrk.fe_id.push_back(ife_id);
+  //dsvtx.extrk_id.push_back(ife_id);
+//}
+
+void FillDSVertex(bool icharm1, bool icharm2, int infound, int inextrk, int inprg1, int incls, int invtx2, int inlip){
+
+  dsvtx.charm1 = icharm1;
+  dsvtx.charm2 = icharm2;
+  dsvtx.nfound = infound;
+  dsvtx.nextrk = inextrk;
+  dsvtx.nprg1 = inprg1;
+  dsvtx.ncls = incls;
+  dsvtx.nvtx2 = invtx2;
+  dsvtx.nlip  = inlip;
+}
+
+void Set0() {
+  trk.icharm.clear(); trk.fe_id.clear(); trk.mc_id.clear(); trk.mc_pdg.clear(); trk.vip.clear(); trk.vka.clear(); trk.tip.clear(); trk.tka.clear(); trk.nseg.clear(); trk.type.clear(); trk.x.clear(); trk.y.clear(); trk.z.clear(); trk.tx.clear(); trk.ty.clear(); trk.iseg_ip.clear(); trk.iseg_ka.clear(); trk.mc_ev.clear();  trk.mc_tid.clear();  trk.mc_pid.clear(); trk.npl.clear(); trk.nholes.clear(); trk.maxgap.clear(), trk.incoming.clear();
+
+  dsvtx.prg1_id.clear(); dsvtx.lip_id.clear(); dsvtx.cls_ntrk.clear(); dsvtx.cls_x.clear(), dsvtx.cls_y.clear(), dsvtx.cls_z.clear(), dsvtx.cls_mean_ip.clear();
+  dsvtx.cls_mean_ip2v.clear(); dsvtx.cls_vx.clear(), dsvtx.cls_vy.clear(), dsvtx.cls_vz.clear(), dsvtx.cls_mean_vip.clear();
+  dsvtx.cls_tid.clear(); dsvtx.cls_cid.clear(); dsvtx.vtx2_vid.clear(); dsvtx.vtx2_tid.clear(); dsvtx.extrk_id.clear(); dsvtx.cls_iclust.clear();
+  dsvtx.vtx2_vx.clear(); dsvtx.vtx2_vy.clear(); dsvtx.vtx2_vz.clear(); dsvtx.vtx2_dz.clear(); dsvtx.vtx2_ntrk.clear(); dsvtx.vtx2_flag.clear(); dsvtx.vtx2_bdt2.clear(); dsvtx.vtx2_prob.clear();
+  dsvtx.vtx2_xt.clear(); dsvtx.vtx2_yt.clear(); dsvtx.vtx2_zt.clear(); dsvtx.vtx2_tx.clear(); dsvtx.vtx2_ty.clear(); dsvtx.vtx2_tnseg.clear(); dsvtx.vtx2_vip.clear(); dsvtx.vtx2_vka.clear(); dsvtx.vtx2_mc_ev.clear();  dsvtx.vtx2_mc_tid.clear();  dsvtx.vtx2_mc_pid.clear(); dsvtx.vtx2_npl.clear(); dsvtx.vtx2_nholes.clear(); dsvtx.vtx2_maxgap.clear(); dsvtx.vtx2_tip_rms.clear(); dsvtx.vtx2_tip_mean.clear(); dsvtx.vtx2_tip_max.clear(); dsvtx.vtx2_tka_rms.clear(); dsvtx.vtx2_tka_mean.clear(); dsvtx.vtx2_tka_max.clear(), dsvtx.vtx2_incoming.clear(); dsvtx.vtx2_trk_pms.clear(); dsvtx.vtx2_trk_pms_ang.clear(); dsvtx.vtx2_trk_mc_mom.clear(); dsvtx.vtx2_trk_mc_edep.clear();
+  
+  dsvtx.extrk_xt.clear(); dsvtx.extrk_yt.clear(); dsvtx.extrk_zt.clear(); dsvtx.extrk_tx.clear(); dsvtx.extrk_ty.clear(); dsvtx.extrk_tnseg.clear(); dsvtx.extrk_vip.clear(); dsvtx.extrk_vka.clear(); dsvtx.extrk_mc_ev.clear();  dsvtx.extrk_mc_tid.clear();  dsvtx.extrk_mc_pid.clear(); dsvtx.extrk_npl.clear(); dsvtx.extrk_nholes.clear(); dsvtx.extrk_maxgap.clear();
+
+  //extrk.icharm.clear(); extrk.fe_id.clear(); extrk.mc_id.clear(); extrk.mc_pdg.clear(); extrk.vip.clear(); extrk.vka.clear(); extrk.tip.clear(); extrk.tka.clear(); extrk.nseg.clear(); extrk.type.clear(); extrk.x.clear(); extrk.y.clear(); extrk.z.clear(); extrk.tx.clear(); extrk.ty.clear(); extrk.iseg_ip.clear(); extrk.iseg_ka.clear();
+  
+  
+}
+// FUNCTIONS
+
+// Impact parameter of a track with respect to a vertex
+/*float IPtoVertex(TVector3 vertexpos, TVector3 trackstartpos, float tracktx, float trackty){
+ 
+ float dz = -vertexpos(2) + trackstartpos(2);
+ float ipx = -tracktx * dz + trackstartpos(0) - vertexpos(0);
+ float ipy = -trackty * dz + trackstartpos(1) - vertexpos(1);
+
+ float ip = TMath::Sqrt(pow(ipx,2)+pow(ipy,2));
+
+ return ip;
+}*/
+
+// Impact parameter of a track with respect to a vertex
+float IPtoVertex(TVector3 vertexpos, TVector3 trackstartpos, float tracktx, float trackty){
+ 
+ float dz = -vertexpos(2) + trackstartpos(2);
+ float x0 = -tracktx * dz + trackstartpos(0) - vertexpos(0);
+ float y0 = -trackty * dz + trackstartpos(1) - vertexpos(1);
+ float m = (trackty/tracktx);
+ float ip = TMath::Abs(-(y0-m*x0))/TMath::Sqrt(1+m*m);
+ //cout << x0 << " " << y0 << " " << m << endl; 
+ //float ip = TMath::Sqrt(pow(ipx,2)+pow(ipy,2));
+
+ return ip;
+}
+
+// IPmax over IPrms calculated on segments of a track with respet to a vertex
+void SegIPtoVertex2(TVector3 vertexpos, int nseg, float* seg_x, float* seg_tx, float* seg_y, float* seg_ty, float* seg_z, float IpSeg[2]){
+ 
+  float ipseg[nseg];
+  float delta_ipseg[nseg-1];
+  float ipseg_nomax[nseg-2];
+  
+  for (int i = 0; i < nseg; i++){   
+    float dz = -vertexpos(2) + seg_z[i];
+    float ipx = -seg_tx[i] * dz + seg_x[i] - vertexpos(0);
+    float ipy = -seg_ty[i] * dz + seg_y[i] - vertexpos(1);
+    ipseg[i] = TMath::Sqrt(pow(ipx,2)+pow(ipy,2));
+  }
+
+  for (int i = 0; i < nseg-1; i++){
+    delta_ipseg[i] = TMath::Abs(ipseg[i+1] - ipseg[i]);
+    //cout << i << " " << delta_ipseg[i] << endl;
+  }
+
+  float ipsegmax = TMath::MaxElement(nseg-1, delta_ipseg);
+  int index=0;
+  IpSeg[0]=0;
+  for (int i = 0; i < nseg-2; i++){
+    if(delta_ipseg[i]!=ipsegmax){
+      ipseg_nomax[index]=delta_ipseg[i];
+      index++;
+    }
+    else IpSeg[0]=i;
+  }
+  IpSeg[0]++;
+  float ipsegrms = TMath::RMS(index, ipseg_nomax);
+  float ipsegmean = TMath::Mean(index, ipseg_nomax);
+  
+  //IpSeg[1] = ipsegmax/ipsegrms;
+  if(ipsegrms!=0) IpSeg[1] = (ipsegmax-ipsegmean)/ipsegrms;
+  else IpSeg[1] = -1;
+  // cout << IpSeg[1] << endl;
+}
+
+void SegIPtoVertex3(TVector3 vertexpos, int nseg, float* seg_x, float* seg_tx, float* seg_y, float* seg_ty, float* seg_z, float trk_ip[3]){
+ 
+  float ipseg[nseg];
+  float delta_ipseg[nseg-1];
+  float ipseg_nomax[nseg-2];
+  
+  for (int i = 0; i < nseg; i++){   
+    float dz = -vertexpos(2) + seg_z[i];
+    float ipx = -seg_tx[i] * dz + seg_x[i] - vertexpos(0);
+    float ipy = -seg_ty[i] * dz + seg_y[i] - vertexpos(1);
+    ipseg[i] = TMath::Sqrt(pow(ipx,2)+pow(ipy,2));
+  }
+
+  for (int i = 0; i < nseg-1; i++){
+    delta_ipseg[i] = TMath::Abs(ipseg[i+1] - ipseg[i]);
+    //cout << i << " " << delta_ipseg[i] << endl;
+  }
+
+  //float trk_ip[3]={};
+  trk_ip[0] = TMath::RMS(nseg-1,delta_ipseg);
+  trk_ip[1] = TMath::Mean(nseg-1,delta_ipseg);
+  trk_ip[2] = TMath::MaxElement(nseg-1,delta_ipseg);
+  //return trk_ip;
+}
+
+//// Kinkmax over Kinkrms calculated on segments of a track with respet to a vertex
+void FedraTrackKink2(int nseg, float* seg_tx, float* seg_ty, float *dtheta){
+
+  // cout << "num seg " << nseg << endl;
+  
+  float kinkangles[nseg-1];
+  float kinkangles_nomax[nseg-2];
+  //loop on subsequent segment pairs of the tracks
+ 
+  
+  for (int i = 0; i < nseg-1; i++){
+    kinkangles[i]=TMath::Sqrt(pow(seg_tx[i+1]-seg_tx[i],2)+pow(seg_ty[i+1]-seg_ty[i],2));
+    //cout << i << " " << kinkangles[i] << endl;
+  }
+  //getting maximum and rms
+  float deltathetamax = TMath::MaxElement(nseg-1, kinkangles);
+  int index=0;
+  for (int i = 0; i < nseg-2; i++){
+    if(kinkangles[i]!=deltathetamax){
+      kinkangles_nomax[index]=kinkangles[i];
+      index++;
+    }
+    else dtheta[0]=i;
+  }
+  dtheta[0]++;
+  float deltathetarms = TMath::RMS(index, kinkangles_nomax);
+  float deltathetamean = TMath::Mean(index, kinkangles_nomax);
+  //dtheta[1] = deltathetamax/deltathetarms;
+  if(deltathetarms!=0)dtheta[1] = (deltathetamax-deltathetamean)/deltathetarms;
+  else dtheta[1]= -1;
+  //cout << dtheta[1] << endl;
+}
+
+void FedraTrackKinkConsecutive(int nseg, float* seg_tx, float* seg_ty, float trk_kink[3]){
+  
+  float kinkangles[nseg-1];
+  float kinkangles_nomax[nseg-2];
+  //loop on subsequent segment pairs of the tracks
+  for (int i = 0; i < nseg-1; i++){
+    kinkangles[i]=TMath::Sqrt(pow(seg_tx[i+1]-seg_tx[i],2)+pow(seg_ty[i+1]-seg_ty[i],2));
+    //cout <<"kink 4 " << nseg << " " << i << " " << kinkangles[i] << endl;
+  }
+  //float trk_kink[3]={};
+  trk_kink[0] = TMath::RMS(nseg-1, kinkangles);
+  trk_kink[1] = TMath::Mean(nseg-1, kinkangles);
+  trk_kink[2] = TMath::MaxElement(nseg-1, kinkangles);
+  //return trk_kink;
+  }
+
+void FedraTrackKinkRandom(int nseg, float* seg_tx, float* seg_ty, float trk_kink[3]){
+
+  int dim = (nseg*(nseg-1))/2.;
+  int idelta=0;
+  float kinkangles[dim];
+  //loop on random segment pairs of the tracks
+  for (int i = 0; i < nseg; i++){
+    for (int j =(i+1); j < nseg; j++){
+      kinkangles[idelta]=TMath::Sqrt(pow(seg_tx[j]-seg_tx[i],2)+pow(seg_ty[j]-seg_ty[i],2));
+      //cout <<"kink 3 "<< dim << " " << nseg << " " << idelta << " " << kinkangles[idelta] << endl;
+      idelta++;
+    }
+  }
+  //float trk_kink[3]={};
+  trk_kink[0] = TMath::RMS(dim, kinkangles);
+  trk_kink[1] = TMath::Mean(dim, kinkangles);
+  trk_kink[2] = TMath::MaxElement(dim, kinkangles);
+  //return trk_kink;
+}
+
+// vector elements comparison
+static bool compareVectors(vector<int> a, vector<int> b)
+{
+    std::sort(a.begin(), a.end());
+    std::sort(b.begin(), b.end());
+    return (a == b);
+}
+
+
+// Max betxween ty and tx RMS multiplied for the number of segments
+float segRMS(int nseg, float* seg_tx, float* seg_ty, float tx, float ty){ 
+
+  float seg_tka[nseg];
+  for(int i=0;i<nseg;i++){
+   seg_tka[i] = sqrt(pow(seg_tx[i] - tx,2) + pow(seg_ty[i] - tx,2));
+  }
+  
+  float seg_rms = TMath::Abs(TMath::MaxElement(nseg,seg_tka));
+  return seg_rms;  
+}
+
+
+//tuple <vector<vector<int>>, vector<double>, vector<double>, vector<double>, vector<int>, vector<int>,vector<vector<int>>, vector<double>, vector<vector<double>>> dbscan(double epsilon, double epsilon_phi, int min_points, int ntrack, vector<double> xpos, vector<double> ypos, vector<double> zpos, vector<double> tx, vector<double> ty, vector<int> trk_id){
+
+tuple <vector<vector<int>>> dbscan(double epsilon, double epsilon_phi, int min_points, int ntrack, vector<double> xpos, vector<double> ypos, vector<double> zpos, vector<double> tx, vector<double> ty, vector<int> trk_id){
+
+  //// CLUSTERING PER EVENTO
+  int isel=0;
+  int icl=0;
+     int icl_rel=0;
+     int sphere_points=0;
+     int sphere_points2=0;
+
+     std::vector<std::vector<bool>> visited;
+     std::vector<bool> visited2;
+     std::vector<int> n_el;
+     std::vector<int> n_el_rel;
+     std::vector<double> mean_dist;
+     std::vector<double> mean_dist_phi;
+     std::vector<double> mean_dist_vtx;
+     std::vector<double> mean_dist_vtx_rel;
+     //std::vector<double> first_seg_dist;
+     //std::vector <std::vector<int> > cl_el;
+     std::vector <std::vector<int> > cl_el_rel;
+     float dist=0;
+     float dist_phi=0;
+
+     float min_dist=10000000000;
+     int tmp_1=-1;
+     int tmp_2=-1;
+     int ncross = ntrack*(ntrack-1)/2.;
+     vector<bool> taken_track;
+     
+
+     vector<int> same_z(ntrack);
+     same_z.clear();
+
+     vector<int> zcl;
+
+     vector<double> x_cross;
+     vector<double> y_cross;
+     vector<double> xy_cross;
+     //vector<double> dist_rel;
+     std::vector <std::vector<double> > dist_rel;
+     std::vector <std::vector<int> > cl_friend;
+     std::vector <std::vector<int> > cl_el;
+     std::vector <std::vector<int> > sel_id;
+     dist_rel.resize(ntrack, std::vector<double>(ntrack));
+     cl_el_rel.resize(ncross);
+     cl_friend.resize(ntrack);
+     cl_el.resize(ntrack);
+     vector<double> phi_cross;
+     vector<int> cross_id1;
+     vector<int> cross_id2;
+     int index_cross=0;
+     float dist_cross=0;
+
+     
+
+     //TH2F *hgr = new TH2F("hgr","hgr",200,-10,10,200,-10,10);
+
+     icl=0;
+     icl_rel=0;
+     sphere_points=0;
+     sphere_points2=0;
+     dist=0;
+     dist_phi=0;
+
+     taken_track.clear();
+     taken_track.resize(ntrack);
+     visited.clear();
+     visited2.clear();
+     n_el.clear();
+     mean_dist.clear();
+     mean_dist_phi.clear();
+     //first_seg_dist.clear();
+
+     //cl_el.clear();
+     //cl_el_rel.clear();
+     visited2.resize(ncross);
+     n_el.resize(ncross);
+     mean_dist.resize(ncross);
+     mean_dist_phi.resize(ncross);
+     mean_dist_vtx.resize(ncross);
+     sel_id.resize(ncross);
+     //cl_el.resize(ncross, std::vector<int>(ncross));
+     //cl_el_rel.resize(ncross, std::vector<int>(ncross));
+     visited.resize(ncross,std::vector<bool>(ncross));
+     //cout << "size " << cl_el_rel.size() << endl;  
+
+     /// CONTA LE OCCORRENZE PER Z 
+     bool zflag=false;
+     int izcl=0;
+     for(int h=0; h<ntrack; h++){
+       //cout << "dbscan " << zpos.at(h) << " " << xpos.at(h) << " " << ypos.at(h) << endl;
+       zflag=0;
+       for (int i=0;i<h;i++){
+	 if (zpos[h]==zpos[i]){ // controlla che quel numero non sia già stato considerato in precedenza
+	   zflag=true;
+	   break;
+	 }
+       }
+	 if (zflag==false){ // se il numero non è stato considerato in precedenza, allora conta quante volte compare nel vettore e visualizza il numero di comparse
+	   same_z[h]=1;
+	   zcl.push_back(zpos[h]);
+	   for (int i=h+1;i<ntrack;i++){		 
+	     if(zpos[h] == zpos[i]) same_z[h]++;
+	   }
+	   //cout << "samezpos " << izcl << " " << zcl[izcl] << endl;
+	   izcl++;
+	 }
+	 //cout << "samez " << h << " " << same_z[h] << endl;	 
+     }
+
+     // aggiusto le posizioni xy sullo stesso piano z
+     vector<int>::iterator max_z = max_element(same_z.begin(), same_z.end()); // c++11
+     auto max_z_occurrence = *max_element(same_z.begin(), same_z.end()); // c++11    
+     int iz = distance(same_z.begin(), max_z);
+     
+     // calcola le posizioni nel piano trasverso xy
+     for(int j=0;j<ntrack;j++){
+       cl_friend.at(j).push_back(trk_id[j]);
+       cl_el.at(j).push_back(j);
+       //cout << "dbscan2 " << j << " " << ntrack << " " <<  zpos.at(j) << " " << xpos.at(j) << " " << ypos.at(j) << endl;
+       //cout << "size " << dist_rel[j].size() << endl;
+       for(int l=j+1;l<ntrack;l++){
+	 // // //
+	 if(l!=j){
+	   //cout << "hello" << endl;
+	   //dist_rel[j][l]=TMath::Sqrt(TMath::Power(xpos[l] - (xpos[j] - tx[l]*(zpos.at(l)-zpos.at(j))),2) +  TMath::Power(ypos[l] - (ypos[j] - ty[l]*(zpos.at(l)-zpos.at(j))),2));
+	   dist_rel[j][l]=TMath::Sqrt(TMath::Power(xpos[l] - (xpos[j] - tx[l]*(zpos.at(l)-zpos.at(j))),2) +  TMath::Power(ypos[l] - (ypos[j] - ty[l]*(zpos.at(l)-zpos.at(j))),2));	   
+	 }
+	 if(l==j)dist_rel[j][l]=100000;
+	 //cout <<"dist_rel " << trk_id[j] << " " << trk_id[l] << " " << dist_rel.at(j).at(l) << " " << (zpos.at(l)-zpos.at(j)) <<  endl;
+	 
+	 if(dist_rel.at(j).at(l)<20){
+	   n_el_rel.push_back(2);
+	   cl_el_rel[icl_rel].push_back(j);
+	   cl_el_rel[icl_rel].push_back(l);
+	   //mean_dist_vtx_rel.push_back(xy_cross.at(j));
+	   //first_seg_dist.push_back(dist_rel.at(j).at(l));
+	   cl_friend.at(j).push_back(trk_id[l]);
+	   cl_friend.at(l).push_back(trk_id[j]);
+	   cl_el.at(j).push_back(l);
+	   cl_el.at(l).push_back(j);
+	   //cout << "dist_rel " << icl_rel << " " << trk_id[j] << " " << trk_id[l]  << " " << dist_rel.at(j).at(l)  << " " << cl_el_rel[icl_rel][0] << " " << cl_el_rel[icl_rel][1] << endl;
+	   icl_rel++;     
+	 }	 
+       }
+     }
+
+     /*
+     for(int j=0;j<cl_friend.size();j++){
+       for(int k=0;k<cl_friend.at(j).size();k++){
+	 cout <<"cl_friend "<< j << " " << k << " " << cl_friend.at(j).at(k) << endl;
+       }
+     }*/
+
+     // FARE LE INTERSEZIONI SU PIÙ Z
+     cout << "hello" << endl;
+     for(int j=0;j<ntrack;j++){
+       if(zpos.at(iz)!=zpos.at(j)){	 
+	 xpos[j] = xpos[j] - tx[j]*(zpos.at(j)-zpos.at(iz));
+	 ypos[j] = ypos[j] - ty[j]*(zpos.at(j)-zpos.at(iz));
+	 zpos[j] = zpos[iz];
+       }
+       //cout << "dbscan2 " << j << " " << trk_id.at(j) << " " <<  zpos.at(j) << " " << xpos.at(j) << " " << ypos.at(j) << endl;
+     }
+     
+     
+     // calcolo dei punti di intersezione in xy
+     for(int j=0;j<ntrack;j++){
+       taken_track.push_back(false);
+       for(int l=(j+1);l<ntrack;l++){
+	 x_cross.push_back((ypos[l]-ypos[j] + (ty[j]/tx[j])*xpos[j] - (ty[l]/tx[l])*xpos[l])/(ty[j]/tx[j] - ty[l]/tx[l])-vx) ;
+	 //cout << "vvv " << vx << " " << vy << " " << x_cross[index_cross] << " " << xpos[j] <<  endl;
+	 y_cross.push_back(ypos[j] + (ty[j]/tx[j])*(x_cross[index_cross]+vx - xpos[j])-vy);
+	 //xy_cross.push_back(TMath::Sqrt(TMath::Power((x_cross[l]-x_cross[j]),2)+TMath::Power((y_cross[l]-y_cross[j]),2)));
+	 cross_id1.push_back(j);
+	 cross_id2.push_back(l);	 
+	 xy_cross.push_back(TMath::Sqrt(TMath::Power(x_cross[index_cross],2)+TMath::Power(y_cross[index_cross],2)));
+	 phi_cross.push_back(TMath::ATan2(y_cross[index_cross], x_cross[index_cross]));
+	 //cout << "cross "<< index_cross << " " << trk_id[j] << " " << trk_id[l] << " " << x_cross[index_cross] << " " << y_cross[index_cross] << " " <<  xy_cross[index_cross] <<  endl;
+	 //hgr->Fill(x_cross[index_cross],y_cross[index_cross]);
+	 index_cross++;
+	
+       }       
+     }
+
+     // for(int k=0;k<index_cross;k++){
+     // }
+     
+     //hgr->SaveAs("hgr.root");
+     // do-while per un dbscan dinamico     
+     // do{
+     
+       icl=0;
+       //icl_rel=0;
+       sphere_points=0;
+       sphere_points2=0;
+       dist=0;
+       dist_phi=0;
+       
+       taken_track.clear();
+       taken_track.resize(ntrack);
+       visited.clear();
+       visited2.clear();
+       n_el.clear();
+       //n_el_rel.clear();
+       mean_dist.clear();
+       mean_dist_phi.clear();
+       mean_dist_vtx.clear();
+       //mean_dist_vtx_rel.clear();
+       //first_seg_dist.clear();
+
+       cl_el.clear();
+       //cl_el_rel.clear();
+       
+       visited.resize(ncross,std::vector<bool>(ncross));
+       visited2.resize(ncross);
+       n_el.resize(ncross);
+       mean_dist.resize(ncross);
+       mean_dist_phi.resize(ncross);
+       mean_dist_vtx.resize(ncross);
+       cl_el.resize(ncross, std::vector<int>(ncross));
+       //cl_el_rel.resize(ncross, std::vector<int>(ncross));
+       //cout << "size " << cl_el_rel.size() << endl;  
+
+       for(int j=0;j<ncross;j++){
+	 for(int k=0;k<ncross;k++){
+	    visited[j][k]=false;
+	 }
+       }
+       
+       for(int j=0;j<ncross;j++){
+	 //cout << "ecc "<<j << " " << cross_id1.at(j) << " " << cross_id2.at(j) << " " <<  endl;  // controllo codice crash for dbscan 
+	 int npoints=0;
+	 int ndist=0;
+	 double sum_dist=0;
+	 double sum_dist_phi=0;
+	 double sum_dist_vtx=0;
+	 
+	 for(int k=0;k<taken_track.size();k++){
+	   taken_track[k]=false;
+	 }
+	 
+	 
+	 for(int k=0;k<ncross;k++){ // distanza relativa
+
+	   dist = TMath::Sqrt(TMath::Power(x_cross.at(k)-x_cross.at(j),2)+TMath::Power(y_cross.at(k)-y_cross.at(j),2));
+	   //dist_vtx = (xy_cross.at(k)+xy_cross.at(j))/2.;
+	   dist_phi = phi_cross.at(k)-phi_cross.at(j);
+	   //cout << "dist " << j << " " << k << " " << dist << " " << dist_phi << endl;
+	   //if(dist_vtx < min_dist && k!=j){
+	   //min_dist = dist;
+	   //tmp_1=k;
+	   //tmp_2=j;
+	   //}
+
+	   if(abs(dist)<epsilon  && abs(dist_phi)<epsilon_phi &&  k!=j && !visited[j][k] && !visited[k][j]){
+
+	     //cout << "icl " << icl << " " <<  cross_id1.at(j) << " " << cross_id2.at(j) << " " << cross_id1.at(k) << " " << cross_id2.at(k) << " " <<  dist << " " << dist_phi << endl;
+	     
+	     
+	     if(!taken_track[cross_id1.at(j)]){
+	       cl_el[icl][npoints]=cross_id1.at(j);
+	       taken_track[cross_id1.at(j)]=true;
+	       npoints++;
+	     }
+	     
+	      if(!taken_track[cross_id2.at(j)]){
+		 cl_el[icl][npoints]=cross_id2.at(j);
+		 taken_track[cross_id2.at(j)]=true;
+		 npoints++;
+	      }
+	      
+	       if(!taken_track[cross_id1.at(k)]){
+		 cl_el[icl][npoints]=cross_id1.at(k);
+		 taken_track[cross_id1.at(k)]=true;
+		 npoints++;
+	       }
+
+	       if(!taken_track[cross_id2.at(k)]){
+		 cl_el[icl][npoints]=cross_id2.at(k);
+		 taken_track[cross_id2.at(k)]=true;
+		 npoints++;
+	       }
+	       
+	       //sum_dist += dist;
+	       //sum_dist_phi += abs(dist_phi);
+	       //sum_dist_vtx += dist_vtx;	      
+	       //cout <<"sum_dist " << ndist << " " <<  sum_dist << endl;
+	       //sphere_points++; // crash code
+	       
+	       visited[j][k]=true;
+	       visited[k][j]=true;
+	       //ndist++;
+	     }
+	  }
+	  // cluster di 3 o più elementi
+	    
+	 n_el[icl]=npoints;
+	   ndist = npoints*(npoints-1)/2.;
+	   //mean_dist[icl] = sum_dist/ndist;
+	   //mean_dist_phi[icl] = sum_dist_phi/ndist;
+	   sum_dist=0;
+	   sum_dist_phi=0;
+	   sum_dist_vtx=0;
+	   
+	   for(int k=0;k<npoints;k++){
+	     //cout << "element " << icl << " " <<  k << " " << trk_id[cl_el[icl][k]] << " " << xy_cross.at(cl_el[icl][k]) <<  endl;
+	     for(int l=k+1;l<npoints;l++){	       
+	       sum_dist += TMath::Sqrt(TMath::Power(x_cross.at(cl_el[icl][l])-x_cross.at(cl_el[icl][k]),2)+TMath::Power(y_cross.at(cl_el[icl][l])-y_cross.at(cl_el[icl][l]),2));
+	       sum_dist_phi += abs(phi_cross.at(cl_el[icl][l])-phi_cross.at(cl_el[icl][k]));
+	     }
+	     sum_dist_vtx += xy_cross.at(cl_el[icl][k]);
+	   }
+
+	   mean_dist[icl] = sum_dist/ndist;
+	   mean_dist_phi[icl] = sum_dist_phi/ndist;
+	   mean_dist_vtx[icl] = sum_dist_vtx / ndist;
+	   if(npoints!=0){
+	     //cout << "cluster_info " << icl << " " << ndist << " " << npoints  << " " << n_el[icl] << " " << mean_dist[icl] << " " << mean_dist_phi[icl] << " " << mean_dist_vtx[icl] << endl;
+	     sel_id[isel].push_back(icl);
+	     isel++;
+	   }
+	     icl++;
+	}
+
+
+       std::vector <std::vector<int> > clust_el;
+       clust_el.resize(isel+icl_rel);
+       //cout << isel << " " << icl_rel << clust_el.size() << endl;
+       for(int k=0;k<(icl_rel);k++){
+	 clust_el[k].push_back(cl_el_rel[k][0]);
+	 clust_el[k].push_back(cl_el_rel[k][1]);
+	 //cout <<"clust_el "<< k << " " << clust_el[k][0] << " " << clust_el[k][1] << " " << cl_el_rel[k][0] << endl;
+       }
+       
+       for(int k=0;k<isel;k++){
+	 for(int j=0;j<n_el[sel_id[k][0]];j++){
+	   clust_el[k+icl_rel].push_back(cl_el[sel_id[k][0]][j]);
+	   //cout <<"clust_el " << k+icl_rel << " " << j << " " << clust_el[k+icl_rel][j] << endl;
+	 }
+       }
+	 
+       
+       
+       //cout << "epsilon " << epsilon << " " << " max_el_cl " << *max_element(n_el.begin(), n_el.end()) << endl;
+       //epsilon -= 0.1;
+       //epsilon_phi -=0.01;
+       //}while(*max_element(n_el.begin(), n_el.end())>(ntrack*0.5));
+     
+     //return make_tuple(cl_el,mean_dist,mean_dist_phi,mean_dist_vtx,n_el,n_el_rel,cl_el_rel,mean_dist_vtx_rel,dist_rel);
+       return make_tuple(clust_el);
+}
+
+
+ //------------------- VERTEXING AD HOC ----------------------//
+
+//EdbPVRec     *gAli = NULL;
+//EdbVertexRec *gEVR = NULL;
+//EdbScanCond *cond = NULL;
+////EdbDisplay   *ds   = NULL;
+
+namespace TRACKING_PAR
+{
+  float  momentum = 0.3;    // GeV                                                                                                                                           
+  float  mass     = 0.139;  // particle mass 
+  float  ProbMinP = 0.001;  // minimal probability to accept segment on propagation 
+  int    nsegmin  = 1;      // minimal number of segments to propagate this track 
+  int    ngapmax  = 3;      // maximal gap for propagation 
+}
+
+
+namespace VERTEX_PAR
+{
+  float DZmax      = 740000.; // maximum z-gap in the track-vertex group  
+  float ProbMinV   = 0.0001;  // minimum acceptable probability for chi2-distance between tracks 
+  float ImpMax     = 10000.;  // maximal acceptable impact parameter [microns] (for preliminary check)
+  bool  UseMom     = false;   // use or not track momentum for vertex calculations         
+  bool  UseSegPar  = true;  // use only the nearest measured segments for vertex fit (as Neuchatel)  
+  int   QualityMode= 0;      // vertex quality estimation method (0:=Prob/(sigVX^2+sigVY^2); 1:= inverse average track-vertex distance)  
+  float Abin = 0.01;
+}
+
+EdbVertex* vd(int trmin, EdbVertexRec *gEVR)
+{
+  TObjArray *varr = new TObjArray();
+  TObjArray *tarr = new TObjArray();
+
+  //cout << " do_vtx prova1 " <<endl;
+    
+  EdbVertex *v=0;
+  EdbTrackP *t=0;
+
+  int nv = gEVR->Nvtx();
+  //cout << " *** nv ***" << nv << endl;
+  if(nv<1)
+    {
+      printf("\n\n  No vertex found  :-(\n\n");
+      return v;
+    }
+  for(int i=0; i<nv; i++) {
+    v = (EdbVertex *)(gEVR->eVTX->At(i));
+    if(v->Flag()<0)  continue;
+    if(v->N()<trmin) continue;
+    if(v->Z() > 0.) continue;
+
+    //printf("%6.2f  %6.2f  %6.2f %d\n",v->X(),v->Y(),v->Z(),v->N());
+    varr->Add(v);
+    for(int j=0; j<v->N(); j++) tarr->Add( v->GetTrack(j) );
+  }
+
+  /*
+  gStyle->SetPalette(1);
+  //FOR DISPLAY
+  EdbDisplay   *ds   = NULL;
+  const char *dsname="pred_vtx";
+  ds = EdbDisplay::EdbDisplayExist(dsname);
+  if(!ds)  ds=new EdbDisplay(dsname,-100000.,100000.,-100000.,100000.,-40000., 0.);
+  ds->SetVerRec(gEVR);
+
+  cout << " do_vtx prova5 " <<endl;
+  ds->SetArrTr( tarr );
+  //printf("%d tracks to display\n", tarr->GetEntries() );
+  ds->SetArrV( varr );
+  //printf("%d vertex to display\n", varr->GetEntries() );
+  ds->SetDrawTracks(4);
+  ds->SetDrawVertex(1);
+  ds->Draw();
+  //gROOT->GetListOfCanvases()->Print("/terabig/scan/MICROSCOPE4/ONLINE/b048057/plots/pred_vtx.png");
+  */
+  return v;
+  delete varr;
+  delete tarr;
+}
+
+void do_vertex(EdbVertexRec *gEVR, EdbPVRec    *gAli)
+{
+  using namespace VERTEX_PAR;
+
+  //gEVR = new EdbVertexRec();
+  gEVR->eEdbTracks = gAli->eTracks;
+  gEVR->eVTX       = gAli->eVTX;
+  gEVR->SetPVRec(gAli);
+
+  gEVR->eDZmax=DZmax;
+  gEVR->eProbMin=ProbMinV;
+  gEVR->eImpMax=ImpMax;
+  gEVR->eUseMom=UseMom;
+  gEVR->eUseSegPar=UseSegPar;
+  gEVR->eQualityMode=QualityMode;
+
+  printf("%d tracks vor vertexing\n",  gEVR->eEdbTracks->GetEntries() );
+  int nvtx = gEVR->FindVertex();
+  printf("%d 2-track vertexes was found\n",nvtx);
+
+  if(nvtx == 0) return;
+  int nadd =  gEVR->ProbVertexN();
+  //delete gEVR;
+}
+
+void SetCondTracking(EdbScanCond &cond)
+{
+  cond.SetSigma0( 5., 5., 0.003, 0.003 );     // sigma0 "x, y, tx, ty" at zero angle                                                                                           
+  cond.SetDegrad( 5. );                         // sigma(tx) = sigma0*(1+degrad*tx)                                                                                            
+  cond.SetBins(3, 3, 3, 3);                     // bins in [sigma] for checks                                                                                                  
+  cond.SetPulsRamp0(  5., 5. );                 // in range (Pmin:Pmax) Signal/All is nearly linear
+  cond.SetPulsRamp04( 5., 5. );
+  cond.SetChi2Max( 6.5 );
+  cond.SetChi2PMax( 6.5 );
+  cond.SetChi2Mode( 3 );
+  cond.SetRadX0( 5810. );
+  cond.SetName("OPERA_basetrack");
+}
+
+
+EdbVertex* MakeVtx(TObjArray *tarr){
+
+  EdbPVRec    *gAli = new EdbPVRec();
+  EdbScanCond *cond = new EdbScanCond();
+  SetCondTracking(*cond);
+  gAli->SetScanCond(cond);
+
+  EdbTrackP *tr = new EdbTrackP();
+  Int_t ntr = tarr->GetEntries();
+  for(Int_t itr=0; itr<ntr; itr++){
+    tr = (EdbTrackP*)tarr->At(itr);
+    gAli->AddTrack(tr);
+  }
+  EdbVertexRec *gEVR = new EdbVertexRec();
+  do_vertex(gEVR, gAli);
+  int trmin=2;
+  EdbVertex *vtx;// = new EdbVertex();
+  //vtx = vd(2,gEVR);
+ 
+  return vtx;
+  delete gAli;
+  delete cond;
+  delete tr;
+  delete gEVR;
+  //delete vtx;
+}
+
+EdbTrackP* BuildTrack(Int_t id,Float_t x,Float_t y,Float_t z,Float_t tx,Float_t ty){
+
+  using namespace TRACKING_PAR;
+  
+  EdbSegP *seg = new EdbSegP(id,x,y,tx,ty);
+  seg->SetZ(z);
+  seg->SetDZ(-214.);
+  seg->SetPID(0);
+  seg->SetID(id);
+  seg->SetTrack(id);
+  seg->SetErrorsCOV(1.,1.,10.,0.002,0.002);
+  EdbTrackP *t=new EdbTrackP(seg);
+  t->SetP(momentum);
+  t->SetCounters();
+  t->FitTrackKFS();
+  //cout << x << " " << y << " " << t->X() << " " << t->Y() << endl;
+  return t;
+  delete seg;
+  delete t;
+}
+
+Float_t GetIPMean(EdbVertex *vtx){
+
+  Int_t n = vtx->N();
+  //Float_t IpMean = 0;
+  //Float_t *IpTrk;
+  vector<float> IpTrk(n);
+
+  //for(int i=0; i<n; i++){
+    //IpTrk[i]=vtx->Impact(i);
+  //}
+
+  TVector3 vertexpos;
+  vertexpos.SetXYZ(vtx->X(),vtx->Y(),vtx->Z());
+  TVector3 trackpos;
+
+  EdbTrackP *t;
+  for(int i=0; i<n; i++){
+    t = vtx->GetTrack(i);
+    trackpos.SetXYZ(t->X(),t->Y(),t->Z());
+    //cout << t->X() << " " << t->Y() << " " << t->Z() << endl;
+    IpTrk[i]=IPtoVertex(vertexpos,trackpos,t->TX(),t->TY());
+  }
+
+  // IpMean = TMath::Mean(n,IpTrk);
+  float IpMean = accumulate( IpTrk.begin(), IpTrk.end(), 0.0)/IpTrk.size(); 
+  return IpMean;
+  //delete IpTrk;
+}
+
+
+Float_t GetIPMean2Vtx(EdbVertex *vtx_new, EdbVertex *vtx_ori){
+
+  Int_t n = vtx_new->N();
+  //Float_t IpMean = 0;
+  //Float_t *IpTrk;
+  vector<float> IpTrk(n);
+  
+  TVector3 vertexpos;
+  vertexpos.SetXYZ(vtx_ori->X(),vtx_ori->Y(),vtx_ori->Z());
+  TVector3 trackpos;
+
+  EdbTrackP *t;
+  for(int i=0; i<n; i++){
+    t = vtx_new->GetTrack(i);
+    trackpos.SetXYZ(t->X(),t->Y(),t->Z());
+    //cout << t->X() << " " << t->Y() << " " << t->Z() << endl;
+    IpTrk[i]=IPtoVertex(vertexpos,trackpos,t->TX(),t->TY());
+  }
+
+  //IpMean = TMath::Mean(n,IpTrk);
+  float IpMean = accumulate( IpTrk.begin(), IpTrk.end(), 0.0)/IpTrk.size(); 
+  return IpMean;
+  //delete IpTrk;
+}
+
+EdbMomentumEstimator *mom_est  = new EdbMomentumEstimator();
+
+
+tuple<float,float> momentum_estimator(EdbTrackP &tr){
+  
+  mom_est->SetParPMS_Mag();
+  mom_est->eAlg = 2;
+  mom_est->eMinEntr = 3;
+  
+  float mom1 = mom_est->PMSang(tr);
+  float mom2 = mom_est->PMS(tr);
+  
+  //if(mom1==-99 && mom2!=-100)return mom2;
+  // else return mom1;
+  return make_tuple(mom1,mom2);
+}
+
+  //reading track file and setting branches
+
+EdbTrackP *tr1 = new EdbTrackP();
+
+EdbTrackP* makeTrk(TTree* trk_tree, int trid, int sum_seg){
+
+  tr1->Clear();
+  trk_tree->GetEntry(trid);
+  //tr1->SetN0(n0);
+  //tr1->SetNpl(tnpl);
+  //cout <<"make trk " <<  trid << " " << tr1->Npl() << endl;
+  
+  //tr1->SetM(0.139);                 //TODO
+  for(int u=sum_seg;u<(sum_seg+tnseg);u++){
+    //s1 = (EdbSegP*)(seg->At(i));
+    EdbSegP *s1 = new EdbSegP(trid,s__eX[u],s__eY[u],s__eTX[u],s__eTY[u]);
+    s1->SetPID(s__ePID[u]);
+    s1->SetZ(s__eZ[u]);
+    s1->SetTrack(trid);
+    //cout <<"make trk4 " << u << " " << s__eX[u] << endl;
+    tr1->AddSegment(s1);
+    //tr1->SetCounters();
+    s1=0;
+    delete s1;
+  } //end on loop on segments associated to the track
+  //cout <<"make trk5 " <<  trid << " " << tnpl << " " << tnseg <<  endl;
+  //cout << "trk_npl " << tr1->Npl() << endl;
+  //tr1->SetSegmentsTrack(trid);
+  tr1->SetCounters();
+  //cout <<"make trk " <<  trid << " " << tr1->Npl() << " " << tr1->N() << endl;
+
+  return tr1;
+  //adding track to drawing set and building EDA
+}
+ 
+ 
+
+void Loop()
+{
+
+
+  //gEDBDEBUGLEVEL=0;
+  
+  int choice; 
+  cout << "1: Vertex Characterization - 2: DecaySearch" << endl;
+  cin >> choice;
+  /* 
+  int cut_nseg;
+  cout << "Min number of segments" << endl;
+  cin >> cut_nseg;
+  cout << endl;
+
+  float cut_prg1;
+  cout << "Minor cut ipmax / rmax" << endl;
+  cin >> cut_prg1;
+  cout << endl;*/
+  
+  ofstream log_ds;
+  log_ds.open("log_info_ds.txt",ios::out);
+  log_ds << "//----V. GENTILE 11/01/2020 ------// \n INFO ON DEACAY SEARCH" << endl;
+  
+  ofstream log_decay;
+  log_decay.open("log_ds_search.txt",ios::out);
+  log_decay << "//----V. GENTILE ------// \n SEARCH OF CHARM VERTEX DECAY" << endl;
+
+  TFile * fedrafile = TFile::Open("vertextree.root");  // full
+  TFile * trackfile = TFile::Open("linked_tracks.root");  // full
+  TFile * bdtfile = TFile::Open("vtx_BDT_data_evaluated.root");  // full
+  TFile * bdtfile2 = TFile::Open("vtx_BDT_data_evaluated2nd.root");  // no primary
+  TFile * simulationfile = TFile::Open("../ship.conical.Pythia8CharmOnly-TGeant4_dig.root");
+  //TFile * infovertexfile = TFile::Open("TMVA/vtx_MC_analysis.root");
+ 
+
+  TTree *simtree = (TTree*) simulationfile->Get("cbmsim");     
+  TTree *vtx_fedratree = (TTree*) fedrafile->Get("vtx");
+  TTree *trk_fedratree = (TTree*) trackfile->Get("tracks");
+  TTree *bdt_tree = (TTree*) bdtfile->Get("bdt");
+  TTree *bdt_tree2 = (TTree*) bdtfile2->Get("bdt");
+  
+
+  if(vtx_fedratree == 0) return;
+      
+  vtx_reader_Fedra(vtx_fedratree);
+  trk_reader_Fedra(trk_fedratree);  
+  bdt_reader(bdt_tree);
+  bdt_reader2(bdt_tree2);
+  cbmsim_reader_MC(simtree);
+
+  Long64_t nentries_vtx_fedra = vtx_fedratree->GetEntriesFast();
+  log_ds<<"tot entries vtx fedra "<< nentries_vtx_fedra << endl;
+
+  Long64_t nsim = simtree->GetEntriesFast();
+  //int nsim; //=10000; // da cambiare in base a simulazione
+
+  //cout << "Eventi nella simulazione (1 se file di dati) ";
+  //cin >> nsim;
+  //cout << endl;
+  
+  vector <vector<bool>> mc_charm_found;
+  mc_charm_found.resize(nsim);
+  for(int i=0;i<nsim;i++){
+    mc_charm_found.at(i).resize(2);
+    for(int j=0;j<2;j++){
+      mc_charm_found.at(i).at(j)=false;
+    }
+  }
+  
+  Long64_t nentries_trk_fedra = trk_fedratree->GetEntriesFast();
+  log_ds<<"tot entries trk fedra "<< nentries_trk_fedra << endl;
+  
+
+  
+  //BDT
+  Long64_t nentries_bdt = bdt_tree->GetEntriesFast();
+  log_ds<<"tot entries bdt "<< nentries_bdt << endl;
+
+  //BDT2
+  Long64_t nentries_bdt2 = bdt_tree2->GetEntriesFast();
+  log_ds<<"tot entries bdt2 "<< nentries_bdt2 << endl;
+
+  vector<vector<double>> vtx_bdt;
+  vector<vector<double>> vtx_bdt2;
+  vtx_bdt.resize(nentries_vtx_fedra);
+  vtx_bdt2.resize(nentries_vtx_fedra);
+  for(int i=0;i<nentries_vtx_fedra;i++){
+    vtx_bdt.at(i).push_back(-100);
+    vtx_bdt2.at(i).push_back(-100);
+  }
+
+  for (Long64_t ientry=0; ientry<nentries_bdt;ientry++) { // Vertex index    
+    bdt_tree->GetEntry(ientry);
+    //cout << "BDT " << ientry << " " << bdt_vID << " "<<  bdt_value << endl;
+    //vtx_bdt.push_back(bdt_value);
+    vtx_bdt.at(bdt_vID).at(0)=bdt_value;
+    bdt_tree2->GetEntry(ientry);
+    vtx_bdt2.at(bdt_vID2).at(0)=bdt_value2;
+    //vtx_bdt_id.push_back(bdt_value);
+    //cout <<"BDT2 " <<  ientry << " " << bdt_vID2 << " " << bdt_value2 << endl;
+
+  }
+  
+  
+  trk_fedratree->BuildIndex("trid");
+  vtx_fedratree->BuildIndex("vID");
+
+
+   int vbinx=52;//13;//52;
+   int vbiny=40;//10;//24;
+   int vbinz=16;//4;//16;
+
+   double epsilon=10; //0.5; //micron
+   double epsilon_phi=0.1; //rad
+   int min_points=1;
+   
+   TH3D * hvertex = new TH3D("hv","hv",vbinx,0,130000,vbiny,0,100000,vbinz,-37000,3000);
+   
+   int width=hvertex->GetNbinsX();
+   int height=hvertex->GetNbinsY();
+   int depth=hvertex->GetNbinsZ();
+   
+   int xmin = hvertex->GetXaxis()->GetXmin();
+   int xmax = hvertex->GetXaxis()->GetXmax();
+   int ymin = hvertex->GetYaxis()->GetXmin();
+   int ymax = hvertex->GetYaxis()->GetXmax();
+   int zmin = hvertex->GetZaxis()->GetXmin();
+   int zmax = hvertex->GetZaxis()->GetXmax();
+   float xrange = (xmax-xmin)/width;
+   float yrange = (ymax-ymin)/height;
+   float zrange = (zmax-zmin)/depth; 
+   //int counts=3;
+   
+  //cout << width << " " << height << " " << depth << endl;
+  //cout << xmin << " " << xmax << " " << ymin << " " << ymax << " " << zmin << " " << zmax << endl;
+  //cout << xrange << " " << yrange << " " << zrange << endl;
+
+  log_ds << "\nxrange [" << xmin << " , " << xmax << "] ; yrange [" << ymin << " , " << ymax << "] ; zrange [" << zmin << " , " << zmax << "]" << endl;
+  log_ds << "Cube dimensions XYZ (" << xrange << " , " << yrange << " , " << zrange << ")" << endl;
+  log_ds << "N cubes in XYZ "<< width << " " << height << " " << depth << endl;
+  
+
+  std::vector<std::vector<std::vector<std::vector<unsigned int> > > > vtx_list;
+  std::vector<std::vector<std::vector<std::vector<unsigned int> > > > vtx_list_nearby;
+  std::vector<std::vector<std::vector<std::vector<unsigned int> > > > trk_list;
+  std::vector<std::vector<std::vector<std::vector<unsigned int> > > > trk_entry;   
+  vtx_list.resize(width);
+  vtx_list_nearby.resize(width);
+  trk_list.resize(width);
+  trk_entry.resize(width);
+  for(int i=0;i<width;i++){
+    //y axis size
+    vtx_list[i].resize(height);
+    vtx_list_nearby[i].resize(height);
+    trk_list[i].resize(height);
+    trk_entry[i].resize(height);
+    for(int j=0;j<height;j++){
+      //z axis size
+      vtx_list[i][j].resize(depth);
+      vtx_list_nearby[i][j].resize(depth);
+      trk_list[i][j].resize(depth);
+      trk_entry[i][j].resize(depth);
+    }
+  }
+  
+
+  std::vector<bool> event_primary_proton;
+  std::vector<int> vtx_trackmother;
+  std::vector<int> vtx_trackprocess;
+  std::vector<int> vtx_trackpdgcode;
+  std::vector<int> vtx_motherpdgcode;
+  std::vector<int> vtx_trackid;
+  std::vector<double> vtx_trackstartX;
+  std::vector<double> vtx_trackstartY;
+  std::vector<double> vtx_trackstartZ;
+  std::vector<double> vtx_trackeventId;
+  std::vector<double> vtx_trackmom;
+  
+  float mean_freq=0;
+  int max_freq=0;
+  float mean_ev_freq=0;
+  int max_ev_freq=0;
+  int mp_motherID=0;
+  int mp_eventID=0;
+  int mp_procID=0;
+  int mp_pdgID=0;
+  int mp_ev_pdgID=0;
+  int n_electrons=0;
+
+  bool flag_trk=0;
+  bool flag_ev=0;
+  //bool evt_good=false;
+  //bool daughter_proton=false;
+  bool vtx_good=false;
+  
+
+  float mp_vx=0;
+  float mp_vy=0;
+  float mp_vz=0;
+  float mp_vdx=-1;
+  float mp_vdy=-1;
+  float mp_vdz=-1;
+ 
+
+  std::vector<int> vtx_good_vec(nentries_vtx_fedra);
+  std::vector<int> vtx_mp_eventID(nentries_vtx_fedra);
+  std::vector<int> vtx_mp_motherID(nentries_vtx_fedra);
+
+
+   // VERTEX STUDY (NO MC CLASSIFICATION) and DS
+  if(choice==2){
+    int dec_vtx=0;
+    int int_vtx=0;
+    
+    for (Long64_t ientry=0; ientry<nentries_vtx_fedra;ientry++) { // Vertex index
+      //if(ientry%100==0)cout << "VID " << ientry << endl;
+
+      if(ientry%100==0)cout << "VID " << ientry << endl;
+      
+      vtx_fedratree->GetEntry(ientry);
+      if(flag!=2 && flag!=5){ // for debugging
+	//cout << ientry << endl;
+	if(vx>xmin && vx<xmax && vy>ymin && vy<ymax && vz>zmin && vz<zmax ){
+	  
+	  int ix = floor((vx-xmin)/xrange);
+	  int iy = floor((vy-ymin)/yrange);
+	  int iz = floor((vz-zmin)/zrange);
+	  //cout << vx << " " << vy <<" " << vz<< endl;
+	  //cout << ix << " " << iy << " " << iz << endl;
+	  
+	  if(vtx_bdt.at(ientry).at(0)>bdt_cut1 && vz<cut_vz && n>=cut_ntrk){
+	    vtx_list.at(ix).at(iy).at(iz).push_back(vID);
+	    vtx_bdt2.at(ientry).at(0)=-100;
+	    int_vtx++;
+	  }
+	  if(vtx_bdt2.at(ientry).at(0)>bdt_cut2 && vz<cut2_vz){
+
+	    // nuova modifica
+	    int count_seg=0;
+	    for(int itrk=0;itrk<t__;itrk++){
+	      if(flag==1 || flag==4){ // solo i carichi
+		if(incoming[itrk]==0){ // buono se c'è un solo backward
+		  float txpos = t__eX[itrk];
+		  float typos = t__eY[itrk];
+		  float tzpos = t__eZ[itrk];
+		  if(txpos<xmin)txpos=xmin;
+		  if(typos<ymin)typos=ymin;
+		  if(tzpos<zmin)tzpos=zmin;
+		  ix = floor((txpos-xmin)/xrange);
+		  iy = floor((typos-ymin)/yrange);
+		  iz = floor((tzpos-zmin)/zrange);
+		}
+	      }
+	      if(nseg[itrk]>=3)count_seg++;
+	    }
+	    
+	    if(count_seg>=2){
+	      vtx_list_nearby.at(ix).at(iy).at(iz).push_back(vID);
+	      dec_vtx++;
+	    }
+	    //if(vID==9) log_ds << "ci sono" << " " << ix << " " << iy << " " << iz << " " << vtx_list_nearby.at(ix).at(iy).at(iz).size() << endl;
+	  }
+	  //cout << ientry << " " << vtx_bdt.at(ientry).at(0) << endl;
+	  //vtx_ntrk.at(ix).at(iy).at(iz).push_back(n);	  
+	  
+	  //cout << vx << " " << vy << " " << vz << endl;
+	  //hvertex->Fill(vx,vy,vz);
+	}
+      } // only for special vertex
+    }
+    
+    //cout << "size " << nearby_ind++ << endl;
+    log_ds <<  "Number of Interaction Vertex  " << int_vtx << endl;
+    log_ds <<  "Number of Decay Vertex  " << dec_vtx << endl;	  
+
+    // TRACK CLASSIFICATION
+    for (Long64_t ientry=0; ientry<nentries_trk_fedra;ientry++) { // Track index
+      	
+	if(ientry%100==0)cout << "TID " << ientry << endl;
+	
+	trk_fedratree->GetEntry(ientry);
+	
+	if(t_->X()>xmin && t_->X()<xmax && t_->Y()>ymin && t_->Y()<ymax && t_->Z()>zmin && t_->Z()<zmax && tnseg>=cut_nseg){
+	  
+	  int ix = floor((t_->X()-xmin)/xrange);
+	  int iy = floor((t_->Y()-ymin)/yrange);
+	  int iz = floor((t_->Z()-zmin)/zrange);
+	  //cout << vx << " " << vy <<" " << vz<< endl;
+	  //cout << ix << " " << iy << " " << iz << endl;
+
+	  // cout << "tracks " << trid << " " << ix << " " << iy << " " << iz << endl;
+	  trk_list.at(ix).at(iy).at(iz).push_back(trid);
+	}
+    }
+    
+    
+    
+    // DECAY SEARCH
+
+    
+    TFile * f_ds = new TFile("ds_data_result.root","RECREATE");
+
+    TTree *TreeDS = new TTree("ds","decay search");
+
+    TreeDS->Branch("vtx.event", &vtx.event,"vtx.event/I");
+    TreeDS->Branch("vtx.charm", &vtx.charm,"vtx.charm/I");
+    TreeDS->Branch("vtx.fe_id", &vtx.fe_id,"vtx.fe_id/I");
+    TreeDS->Branch("vtx.ntrk", &vtx.ntrk,"vtx.ntrk/I");
+    TreeDS->Branch("vtx.flag", &vtx.flag,"vtx.flag/I");
+    TreeDS->Branch("vtx.maxap", &vtx.maxap,"vtx.maxap/F");
+    TreeDS->Branch("vtx.prob", &vtx.prob,"vtx.prob/F");
+    TreeDS->Branch("vtx.x", &vtx.x,"vtx.x/F");
+    TreeDS->Branch("vtx.y", &vtx.y,"vtx.y/F");
+    TreeDS->Branch("vtx.z", &vtx.z,"vtx.z/F");
+    TreeDS->Branch("vtx.mc_id", &vtx.mc_id,"vtx.mc_id/I");
+    TreeDS->Branch("vtx.mc_parent", &vtx.mc_parent,"vtx.mc_parent/I");
+    TreeDS->Branch("vtx.mc_mult", &vtx.mc_mult,"vtx.mc_mult/I");
+    TreeDS->Branch("vtx.mc_dlen", &vtx.mc_dlen,"vtx.mc_dlen/I");
+    TreeDS->Branch("vtx.mean_ip", &vtx.mean_ip,"vtx.mean_ip/F");
+    TreeDS->Branch("vtx.bdt1", &vtx.bdt1,"vtx.bdt1/F");
+
+    //TreeDS->Branch("trk.itrk", &trk.itrk,"trk.itrk/I");
+    TreeDS->Branch("trk.icharm", &trk.icharm);
+    TreeDS->Branch("trk.fe_id", &trk.fe_id);
+    TreeDS->Branch("trk.vip", &trk.vip);
+    TreeDS->Branch("trk.vka", &trk.vka);
+    TreeDS->Branch("trk.iseg_ip", &trk.iseg_ip);
+    TreeDS->Branch("trk.tip", &trk.tip);
+    TreeDS->Branch("trk.tka", &trk.tka);
+    TreeDS->Branch("trk.iseg_ka", &trk.iseg_ka);
+    TreeDS->Branch("trk.tka", &trk.tka);
+    TreeDS->Branch("trk.nseg", &trk.nseg);
+    TreeDS->Branch("trk.npl", &trk.npl);
+    TreeDS->Branch("trk.nholes", &trk.nholes);
+    TreeDS->Branch("trk.maxgap", &trk.maxgap);
+    TreeDS->Branch("trk.type", &trk.type);
+    TreeDS->Branch("trk.x", &trk.x);
+    TreeDS->Branch("trk.y", &trk.y);
+    TreeDS->Branch("trk.z", &trk.z);
+    TreeDS->Branch("trk.tx", &trk.tx);
+    TreeDS->Branch("trk.ty", &trk.ty);
+    TreeDS->Branch("trk.mc_id", &trk.mc_id);
+    TreeDS->Branch("trk.mc_pdg", &trk.mc_pdg);
+    TreeDS->Branch("trk.mc_ev", &trk.mc_ev);
+    TreeDS->Branch("trk.mc_tid", &trk.mc_tid);
+    TreeDS->Branch("trk.mc_pid", &trk.mc_pid);
+    TreeDS->Branch("trk.incoming", &trk.incoming);
+    
+
+    //TreeDS->Branch("trk.itrk", &trk.itrk,"trk.itrk/I");
+    /*TreeDS->Branch("extrk.icharm", &extrk.icharm);
+    TreeDS->Branch("extrk.fe_id", &extrk.fe_id);
+    TreeDS->Branch("extrk.vip", &extrk.vip);
+    TreeDS->Branch("extrk.vka", &extrk.vka);
+    TreeDS->Branch("extrk.iseg_ip", &extrk.iseg_ip);
+    TreeDS->Branch("extrk.tip", &extrk.tip);
+    TreeDS->Branch("extrk.tka", &extrk.tka);
+    TreeDS->Branch("extrk.iseg_ka", &extrk.iseg_ka);
+    TreeDS->Branch("extrk.tka", &extrk.tka);
+    TreeDS->Branch("extrk.nseg", &extrk.nseg);
+    TreeDS->Branch("extrk.type", &extrk.type);
+    TreeDS->Branch("extrk.x", &extrk.x);
+    TreeDS->Branch("extrk.y", &extrk.y);
+    TreeDS->Branch("extrk.z", &extrk.z);
+    TreeDS->Branch("extrk.tx", &extrk.tx);
+    TreeDS->Branch("extrk.ty", &extrk.ty);
+    TreeDS->Branch("extrk.mc_id", &extrk.mc_id);
+    TreeDS->Branch("extrk.mc_pdg", &extrk.mc_pdg);
+    */
+
+    TreeDS->Branch("dsvtx.charm1", &dsvtx.charm1,"dsvtx.charm1/O");
+    TreeDS->Branch("dsvtx.charm2", &dsvtx.charm2,"dsvtx.charm2/O");
+    TreeDS->Branch("dsvtx.nfound", &dsvtx.nfound,"dsvtx.nfound/I");
+    TreeDS->Branch("dsvtx.nextrk", &dsvtx.nextrk,"dsvtx.nextrk/I");
+    TreeDS->Branch("dsvtx.nprg1", &dsvtx.nprg1,"dsvtx.nprg1/I");
+    TreeDS->Branch("dsvtx.ncls", &dsvtx.ncls,"dsvtx.ncls/I");
+    TreeDS->Branch("dsvtx.nvtx2", &dsvtx.nvtx2,"dsvtx.nvtx2/I");
+    TreeDS->Branch("dsvtx.nlip", &dsvtx.nlip,"dsvtx.nlip/I");
+    TreeDS->Branch("dsvtx.prg1_id", &dsvtx.prg1_id);
+    TreeDS->Branch("dsvtx.lip_id", &dsvtx.lip_id);
+    TreeDS->Branch("dsvtx.cls_iclust", &dsvtx.cls_iclust);
+    TreeDS->Branch("dsvtx.cls_ntrk", &dsvtx.cls_ntrk);
+    TreeDS->Branch("dsvtx.cls_tid", &dsvtx.cls_tid);
+    TreeDS->Branch("dsvtx.cls_cid", &dsvtx.cls_cid);
+    TreeDS->Branch("dsvtx.cls_x", &dsvtx.cls_x);
+    TreeDS->Branch("dsvtx.cls_y", &dsvtx.cls_y);
+    TreeDS->Branch("dsvtx.cls_z", &dsvtx.cls_z);
+    TreeDS->Branch("dsvtx.cls_mean_ip", &dsvtx.cls_mean_ip);
+    TreeDS->Branch("dsvtx.cls_mean_ip2v", &dsvtx.cls_mean_ip2v);
+    TreeDS->Branch("dsvtx.cls_vx", &dsvtx.cls_vx);
+    TreeDS->Branch("dsvtx.cls_vy", &dsvtx.cls_vy);
+    TreeDS->Branch("dsvtx.cls_vz", &dsvtx.cls_vz);
+    TreeDS->Branch("dsvtx.cls_mean_vip", &dsvtx.cls_mean_vip);
+    TreeDS->Branch("dsvtx.vtx2_vid", &dsvtx.vtx2_vid);
+    TreeDS->Branch("dsvtx.vtx2_vx", &dsvtx.vtx2_vx);
+    TreeDS->Branch("dsvtx.vtx2_vy", &dsvtx.vtx2_vy);
+    TreeDS->Branch("dsvtx.vtx2_vz", &dsvtx.vtx2_vz);
+    TreeDS->Branch("dsvtx.vtx2_dz", &dsvtx.vtx2_dz);
+    TreeDS->Branch("dsvtx.vtx2_ntrk", &dsvtx.vtx2_ntrk);
+    TreeDS->Branch("dsvtx.vtx2_flag", &dsvtx.vtx2_flag);
+    TreeDS->Branch("dsvtx.vtx2_bdt2", &dsvtx.vtx2_bdt2);
+    TreeDS->Branch("dsvtx.vtx2_prob", &dsvtx.vtx2_prob);
+    TreeDS->Branch("dsvtx.vtx2_tid", &dsvtx.vtx2_tid);
+    TreeDS->Branch("dsvtx.vtx2_xt", &dsvtx.vtx2_xt);
+    TreeDS->Branch("dsvtx.vtx2_yt", &dsvtx.vtx2_yt);
+    TreeDS->Branch("dsvtx.vtx2_zt", &dsvtx.vtx2_zt);
+    TreeDS->Branch("dsvtx.vtx2_tx", &dsvtx.vtx2_tx);
+    TreeDS->Branch("dsvtx.vtx2_ty", &dsvtx.vtx2_ty);
+    TreeDS->Branch("dsvtx.vtx2_tnseg", &dsvtx.vtx2_tnseg);
+    TreeDS->Branch("dsvtx.vtx2_npl", &dsvtx.vtx2_npl);
+    TreeDS->Branch("dsvtx.vtx2_nholes", &dsvtx.vtx2_nholes);
+    TreeDS->Branch("dsvtx.vtx2_maxgap", &dsvtx.vtx2_maxgap);
+    TreeDS->Branch("dsvtx.vtx2_vip", &dsvtx.vtx2_vip);
+    TreeDS->Branch("dsvtx.vtx2_vka", &dsvtx.vtx2_vka);
+    TreeDS->Branch("dsvtx.vtx2_mc_ev", &dsvtx.vtx2_mc_ev);
+    TreeDS->Branch("dsvtx.vtx2_mc_tid", &dsvtx.vtx2_mc_tid);
+    TreeDS->Branch("dsvtx.vtx2_mc_pid", &dsvtx.vtx2_mc_pid);
+    TreeDS->Branch("dsvtx.vtx2_tip_rms", &dsvtx.vtx2_tip_rms);
+    TreeDS->Branch("dsvtx.vtx2_tip_mean", &dsvtx.vtx2_tip_mean);
+    TreeDS->Branch("dsvtx.vtx2_tip_max", &dsvtx.vtx2_tip_max);
+    TreeDS->Branch("dsvtx.vtx2_tka_rms", &dsvtx.vtx2_tka_rms);
+    TreeDS->Branch("dsvtx.vtx2_tka_mean", &dsvtx.vtx2_tka_mean);
+    TreeDS->Branch("dsvtx.vtx2_tka_max", &dsvtx.vtx2_tka_max);
+    TreeDS->Branch("dsvtx.vtx2_incoming", &dsvtx.vtx2_incoming);
+    TreeDS->Branch("dsvtx.vtx2_trk_pms", &dsvtx.vtx2_trk_pms);
+    TreeDS->Branch("dsvtx.vtx2_trk_pms_ang", &dsvtx.vtx2_trk_pms_ang);
+    TreeDS->Branch("dsvtx.vtx2_trk_mc_mom", &dsvtx.vtx2_trk_mc_mom);
+    TreeDS->Branch("dsvtx.vtx2_trk_mc_edep", &dsvtx.vtx2_trk_mc_edep);
+    // extrk
+    TreeDS->Branch("dsvtx.extrk_id", &dsvtx.extrk_id);
+    TreeDS->Branch("dsvtx.extrk_xt", &dsvtx.extrk_xt);
+    TreeDS->Branch("dsvtx.extrk_yt", &dsvtx.extrk_yt);
+    TreeDS->Branch("dsvtx.extrk_zt", &dsvtx.extrk_zt);
+    TreeDS->Branch("dsvtx.extrk_tx", &dsvtx.extrk_tx);
+    TreeDS->Branch("dsvtx.extrk_ty", &dsvtx.extrk_ty);
+    TreeDS->Branch("dsvtx.extrk_tnseg", &dsvtx.extrk_tnseg);
+    TreeDS->Branch("dsvtx.extrk_npl", &dsvtx.extrk_npl);
+    TreeDS->Branch("dsvtx.extrk_nholes", &dsvtx.extrk_nholes);
+    TreeDS->Branch("dsvtx.extrk_maxgap", &dsvtx.extrk_maxgap);
+    TreeDS->Branch("dsvtx.extrk_vip", &dsvtx.extrk_vip);
+    TreeDS->Branch("dsvtx.extrk_vka", &dsvtx.extrk_vka);
+    TreeDS->Branch("dsvtx.extrk_mc_ev", &dsvtx.extrk_mc_ev);
+    TreeDS->Branch("dsvtx.extrk_mc_tid", &dsvtx.extrk_mc_tid);
+    TreeDS->Branch("dsvtx.extrk_mc_pid", &dsvtx.extrk_mc_pid);
+    
+    int first_entry=0;//nentries_vtx_fedra;//0;//26000;
+    int last_entry=nentries_vtx_fedra;
+    int event = 0;
+
+    
+    for (Long64_t ientry=first_entry; ientry<last_entry;ientry++){
+      
+      // Vertex index
+      //Set0();
+      if(ientry%1==0)cout << "VID DS " << ientry << endl;    
+
+      //Set0();
+      //int nfound=0;
+      
+      int tmp_i=-1;
+      int tmp_j=-1;
+      int tmp_k=-1;
+      int tmp_l=-1;
+      int tmp_i_p1=-1;
+      int tmp_j_p1=-1;
+      int tmp_k_p1=-1;
+      int tmp_i_m1=-1;
+      int tmp_j_m1=-1;
+      int tmp_k_m1=-1;
+      int tmp_vID=-1;
+      double tmp_vx=-1;
+      double tmp_vy=-1;
+      double tmp_vz=-1;
+
+      //int nextrk=0;
+      //int nprg1=0;
+      //int ncls=0;
+      //int nvtx2=0;
+      
+      double mc_tx=0;
+      double mc_ty=0;
+      
+      TVector3 vtx_pos;
+      TVector3 vtx_pos_2nd;
+      TVector3 vtx_pos_nearby;
+      TVector3 trk_pos;
+      
+      vector<int> trk_mc_id;
+      vector<int> trk_z;
+      vector<float> mean_ip;
+      mean_ip.resize(nentries_vtx_fedra);
+      trk_mc_id.clear();
+      trk_z.clear();
+      
+       bool splitted_track=false;
+       bool found_secondary=false;
+       
+       double fdz = 0;
+       double fdl = 0;
+       double ip = 0;
+       double ka = 0;
+       int ty = 0;
+       int mc_nd1=0;
+       int mc_nd2=0;
+       int fnd=0;
+       int icharm=0;
+
+       vector <int> nvx;
+       vector <int> nvy;
+       vector <int> nvz;
+
+       //float *dtheta;
+       //float *ipseg;
+       bool no_secondary_search=false;
+       
+       vtx_fedratree->GetEntry(ientry);
+       
+       //cout << n << endl;
+       // RICERCA DEL CUBO IESIMO DEL VERTICE IESIMO
+       
+       int mean_vtx_seg = s__/n; // mi assicuro che non ci siano troppe tracce con pochi segmenti
+       if(vtx_bdt.at(ientry).at(0)<bdt_cut1)continue;//log_decay << "\nVtx " << ientry << " not a primary!" << endl; 
+       else{ // da scommentare solo se il file in input è stato testato con la bdt
+
+	 Set0();
+	 Int_t nfound=0;
+	 Int_t nextrk=0;
+	 Int_t nprg1=0;
+	 Int_t ncls=0;
+	 Int_t nvtx2=0;
+	 Int_t nlip=0;
+
+	 vector<int> tmp_trk_sel;
+	 
+	 //cout <<"vtx pos " <<  vx << " " << vy << " " << vz << endl;
+	 for(int i=0;i<width;i++){
+	   for(int j=0;j<height;j++){
+	     for(int k=0;k<depth;k++){
+	       //cout << "size " << vtx_list.at(i).at(j).at(k).size() << endl;
+	       if(vtx_list.at(i).at(j).at(k).size()>0){
+		 for(int l=0;l<vtx_list.at(i).at(j).at(k).size();l++){	       
+		   //cout << i << " " << j << " " << k << " " << l <<  " " << vtx_list.at(i).at(j).at(k).at(l) <<  endl;
+		 //log2 << i << " " << j << " " << k << " " << l <<  " " << vtx_list.at(i).at(j).at(k).at(l) << " " << "0" <<  endl;
+		 if(vtx_list.at(i).at(j).at(k).at(l)==vID){ // trovo il cubetto di appartenenza del vertice
+		   log_decay << "\nVtx " << vtx_list.at(i).at(j).at(k).at(l) << " found in coord " << i << " " << j << " " << k << " " << l << "  with Fedra xyz " << vx << " " << vy << " " << vz << " and ntracks " << n << " and BDT value " << vtx_bdt.at(ientry).at(0) <<  endl;
+
+		  
+//cout <<"vtx pos " <<  vx << " " << vy << " " << vz << endl;
+		  vtx_pos.SetXYZ(vx,vy,vz);
+		   tmp_vID=vID;
+		   tmp_vx=vx;
+		   tmp_vy=vy;
+		   tmp_vz=vz;
+		   tmp_i=i;
+		   tmp_j=j;
+		   tmp_k=k;
+		   tmp_l=l;
+
+		   vtx_fedratree->GetEntry(ientry);
+		   //float dtheta[2]={};
+		   //float ipseg[2]={};
+		   int sum_seg=0;
+		   
+		   vector <double> xpos;
+		   vector <double> ypos;
+		   vector <double> zpos;
+		   vector <double> tx;
+		   vector <double> ty;
+		   vector <int> trk_good_id;
+		   vector <int> trk_index;		     
+		   double ip_vec[n];
+		   double ka_vec[n];
+		   double mean_ip=0;		     
+		   vector <double> ip_vec2;
+		   vector <double> ka_vec2;
+		     
+		   // loop su tracce del vertice in esame
+		   for(int itrk=0;itrk<t__;itrk++){		    
+		     
+		     float dtheta[2]={};
+		     float ipseg[2]={};
+		       float seg_x[nseg[itrk]];
+		       float seg_y[nseg[itrk]];
+		       float seg_z[nseg[itrk]];
+		       float seg_tx[nseg[itrk]];
+		       float seg_ty[nseg[itrk]];
+		       float seg_mc_trk[nseg[itrk]];
+		       float seg_mc_evt[nseg[itrk]];		      
+		       trk_pos.SetXYZ(t__eX[itrk],t__eY[itrk],t__eZ[itrk]);
+		       fdz = t__eZ[itrk] - tmp_vz;
+		       ip = IPtoVertex(vtx_pos, trk_pos, t__eTX[itrk], t__eTY[itrk]);
+		       mc_tx = (t__eX[itrk] - tmp_vx)/fdz;
+		       mc_ty = (t__eY[itrk] - tmp_vy)/fdz;
+		       ka = sqrt(pow(mc_tx - t__eTX[itrk],2) + pow(mc_ty - t__eTY[itrk],2));
+		       ip_vec[itrk]=ip;
+		       ka_vec[itrk]=ka;
+		       mean_ip +=ip;
+		       //cout << itrk << " " << TrackID[itrk] << " " << ka << " " << ip << " " << fdz << " " << t__eX[itrk] << " " << t__eY[itrk] <<  endl;
+		       // loop su segmenti delle tracce del vertice in esame che hanno nseg >= 8
+		       if(nseg[itrk]>=cut_nseg){
+			 for(int u=sum_seg;u<(sum_seg+nseg[itrk]);u++){ // perché i segmenti non tornano a zero al cambiare della nuova traccia
+			   seg_x[u-sum_seg]=s__eX[u];
+			   seg_y[u-sum_seg]=s__eY[u];
+			   seg_z[u-sum_seg]=s__eZ[u];
+			   seg_tx[u-sum_seg]=s__eTX[u];
+			   seg_ty[u-sum_seg]=s__eTY[u];
+			   //cout <<"a "<< i << " " << j << " " << k <<" " <<  l << " " << n << " " << itrk << " " << s__eTrack[u] << " " << nseg[itrk] <<  " " <<  (u-sum_seg)  << " " << seg_x[u-sum_seg] << " " <<  seg_y[u-sum_seg] << endl;
+			 }
+
+			 // calcolo di rmax e ipmax per trovare eventuali 1 prong
+			 
+			 //cout << "hello "<< TrackID[itrk] << endl;
+			 FedraTrackKink2(nseg[itrk],seg_tx,seg_ty,dtheta);
+			 SegIPtoVertex2(vtx_pos, nseg[itrk], seg_x, seg_tx, seg_y, seg_ty, seg_z, ipseg);
+			 //FillTrack(-1,TrackID[itrk],-1,-1,nseg[itrk],-1,ip,ka,ipseg[0],ipseg[1],dtheta[0],dtheta[1],t__eX[itrk],t__eY[itrk],t__eZ[itrk],t__eTX[itrk],t__eTY[itrk],nntID[itrk],MCTrackID[itrk],MCMotherID[itrk]);
+			 
+			 // solo se è lo stesso segmento che ha ipmax>10 e rmax>10
+			 if(dtheta[0]==ipseg[0] && dtheta[1]>5 && ipseg[1]>5){
+			   //if(dtheta[1]>5 || ipseg[1]>5){
+			   log_decay << "ds info Possible charm 1 prong with TrackID " << TrackID[itrk] <<  endl;
+			   log_decay << "ds info Rmax seg " << dtheta[0] << " and value " << dtheta[1] << endl;
+			   log_decay << "ds info Ipmax seg " << ipseg[0] << " and value " << ipseg[1] << endl;
+			   Fill1Prong(TrackID[itrk]);
+			   tmp_trk_sel.push_back(TrackID[itrk]);
+			   nprg1++;
+			 }
+		       }
+		       //cout << itrk << " " << TrackID[itrk] << " " << ip << endl;
+		       if(ip>cut_lip){
+			 log_decay << "Large impact parameter for TrackID " << TrackID[itrk] << " with IP: " << ip <<  endl;
+			 tmp_trk_sel.push_back(TrackID[itrk]);
+			 FillLargeIP(TrackID[itrk]);
+			 nlip++;
+		       }
+
+		       if(nseg[itrk]>=cut_nseg && ip>0){
+			 xpos.push_back(t__eX[itrk]);
+			 ypos.push_back(t__eY[itrk]);
+			 zpos.push_back(t__eZ[itrk]);
+			 tx.push_back(t__eTX[itrk]);
+			 ty.push_back(t__eTY[itrk]);
+			 ip_vec2.push_back(ip);
+			 ka_vec2.push_back(ka);
+			 trk_good_id.push_back(TrackID[itrk]);
+			 trk_index.push_back(itrk);
+		       }  
+		       sum_seg += nseg[itrk];
+
+
+		       FillTrack(-1,TrackID[itrk],-1,-1,nseg[itrk],npl[itrk],nholes[itrk],maxgap[itrk],-1,ip,ka,ipseg[0],ipseg[1],dtheta[0],dtheta[1],t__eX[itrk],t__eY[itrk],t__eZ[itrk],t__eTX[itrk],t__eTY[itrk],MCEventID[itrk],MCTrackID[itrk],MCMotherID[itrk],incoming[itrk]);
+		     }
+
+		     
+		     mean_ip = mean_ip/n;
+		     // FillVertex(event,ientry,-1,n,maxaperture,probability,vx,vy,vz,-1,-1,-1,flag,true,-1,mean_ip);
+		     FillVertex(event,ientry,-1,n,maxaperture,probability,vx,vy,vz,-1,-1,-1,flag,true,-1,mean_ip,vtx_bdt.at(ientry).at(0));
+
+		     // CLUSTERING DA MODIFICARE
+		     /*
+		     vector<vector<int>> cl_el;
+		     vector<vector<int>> cl_el_rel;
+		     vector<double> mean_dist;
+		     vector<double> mean_dist_phi;
+		     vector<double> mean_dist_vtx;
+		     vector<double> mean_dist_vtx_rel;
+		     //vector<double> dist_rel;
+		     vector<vector<double>> dist_rel;
+		     vector<int> n_el;
+		     vector<int> n_el_rel;
+		     float min_dist=-1;
+		     //cout << xpos.size() << endl;
+
+		     TObjArray *tarr =  new TObjArray();
+		     EdbTrackP *trackInCluster =0;// new EdbTrackP();
+		     EdbVertex *vtxFromCluster =0;// new EdbVertex();
+		     EdbVertex *vtxOriginal = new EdbVertex();// new EdbVertex();
+		     EdbVertex *vtxNew = new EdbVertex();// new EdbVertex();
+		     Float_t IpMeanCluster = 0;
+		     Float_t IpMeanCluster2Original = 0;
+		     Float_t IpMeanNewVtx = 0;
+		     //Float_t IpMeanNewVtx2Original = 0;
+		     vtxOriginal->SetXYZ(tmp_vx,tmp_vy,tmp_vz);
+		     
+		     if(xpos.size()>1){
+		       
+		       //tie(cl_el,mean_dist,mean_dist_phi,mean_dist_vtx,n_el,n_el_rel,cl_el_rel,mean_dist_vtx_rel,dist_rel) = dbscan(epsilon,epsilon_phi,min_points,xpos.size(),xpos,ypos,zpos,tx,ty,trk_good_id);
+		       tie(cl_el) = dbscan(epsilon,epsilon_phi,min_points,xpos.size(),xpos,ypos,zpos,tx,ty,trk_good_id);
+		       
+		       //cout << "nel rel " << n_el_rel.size() << " " << endl;
+		       
+		     int cl_index=0;
+		     int index_cl=0;
+		     
+		     for(int icl=0;icl<cl_el.size();icl++){
+		       
+		       vector<int> trk_id_new_vtx;
+		       //int index_cl=0;
+		       float sum_ka=0;
+		       float sum_ip=0;
+		       bool not_new_2vtx=false;
+		       if(cl_el[icl].size()>1 && cl_el[icl].size()<=5){
+			
+			 for(int p=0;p<icl;p++){
+			   not_new_2vtx = compareVectors(cl_el[icl],cl_el[p]);
+			   if(not_new_2vtx)break;
+			   
+			 }
+			 
+			 if(!not_new_2vtx){
+			   for(int jcl=0;jcl<cl_el[icl].size();jcl++){
+			    
+			     sum_ka += ka_vec2[cl_el[icl][jcl]];
+			     sum_ip += ip_vec2[cl_el[icl][jcl]];
+			     if(jcl==(cl_el[icl].size()-1)){
+			       sum_ka /= cl_el[icl].size();
+			       sum_ip /= cl_el[icl].size();
+			       
+			       
+			       if(sum_ip>0){
+				 
+				 //log_decay << "Possible cluster " << icl << " with nTracks " << cl_el[icl].size() << " mean cross dist " << mean_dist.at(icl) << " mean phi dist " << mean_dist_phi.at(icl) << " mean vtx dist " << mean_dist_vtx.at(icl) << endl;
+
+				 log_decay << "Possible cluster " << icl << " with nTracks " << cl_el[icl].size() << endl;
+				 
+				 tarr->Clear();
+				 
+				 for(int s=0;s<cl_el[icl].size();s++){
+				   log_decay << "Element " << s << " with Track ID " << trk_good_id[cl_el[icl][s]] << endl;
+				   log_decay << "ip " << ip_vec2[cl_el[icl][s]] << " ka " << ka_vec2[cl_el[icl][s]] << " tx " << tx[cl_el[icl][s]] << " ty " << ty[cl_el[icl][s]] << endl;
+				   trackInCluster = BuildTrack(trk_good_id[cl_el[icl][s]],xpos[cl_el[icl][s]],ypos[cl_el[icl][s]],zpos[cl_el[icl][s]],tx[cl_el[icl][s]],ty[cl_el[icl][s]]);
+				   tarr->Add(trackInCluster);
+				   trk_id_new_vtx.push_back(trk_good_id[cl_el[icl][s]]);
+				   FillClusterTrack(trk_good_id[cl_el[icl][s]],index_cl);
+				 }
+				 
+				 vtxFromCluster = MakeVtx(tarr);
+				 IpMeanCluster = GetIPMean(vtxFromCluster);
+				 IpMeanCluster2Original = GetIPMean2Vtx(vtxFromCluster,vtxOriginal);
+				 //log_decay << "Average ip " << sum_ip << " and ka " << sum_ka << endl;
+				 log_decay << "Vtx from cluster position (x:y:z) = (" << vtxFromCluster->X() << ":"<< vtxFromCluster->Y() << ":"<< vtxFromCluster->Z() << ")"<<endl;				 
+				 log_decay << "IP mean cluster " << IpMeanCluster << endl;
+				 //cout << "VTX ORIGINAL (x:y:z) = (" << vtxOriginal->X() << ":"<< vtxOriginal->Y() << ":"<< vtxOriginal->Z() << ")"<<endl;
+				 //cout << " IP MEAN VTX ORIGINAL" << mean_ip << endl;
+				 log_decay << "IP mean cluster wrt original Vtx " << IpMeanCluster2Original << endl;
+
+				 // new primary vtx
+				 tarr->Clear();
+				 vector <bool> trk_is_ok;
+				 
+				 for(int itrk=0;itrk<n;itrk++){
+				   trk_is_ok.push_back(true);
+				   for(int jtrk=0;jtrk<trk_id_new_vtx.size();jtrk++){
+				     if(TrackID[itrk]==trk_id_new_vtx.at(jtrk))trk_is_ok[itrk]=false;
+				     
+				   }
+				   //cout << itrk << " " << trk_is_ok[itrk] << endl;
+				   if(trk_is_ok[itrk]==true){
+				     trackInCluster = BuildTrack(TrackID[itrk],t__eX[itrk],t__eY[itrk],t__eZ[itrk],t__eTX[itrk],t__eTY[itrk]);
+				     tarr->Add(trackInCluster);
+				     //cout << itrk << " " << TrackID[itrk] << " " << t__eTX[itrk] << endl;
+				   }
+				   
+				 }
+				 
+				 //cout << "array size " << tarr->GetSize() << endl;
+				 vtxNew = MakeVtx(tarr);
+				 IpMeanNewVtx = GetIPMean(vtxNew);
+				 //IpMeanNewVtx2Original = GetIPMean2Vtx(vtxNew,vtxOriginal);
+				 log_decay << "New primary Vtx (without tracks belonging to the cluster) position (x:y:z) = (" << vtxNew->X() << ":"<< vtxNew->Y() << ":"<< vtxNew->Z() << ")"<<endl;				 
+				 log_decay << "IP mean new primary Vtx " << IpMeanNewVtx << endl;
+				 //cout << "VTX ORIGINAL (x:y:z) = (" << vtxOriginal->X() << ":"<< vtxOriginal->Y() << ":"<< vtxOriginal->Z() << ")"<<endl;
+				 log_decay << "IP mean old primary Vtx" << mean_ip << endl;
+				 FillCluster(index_cl,cl_el[icl].size(),vtxFromCluster->X(),vtxFromCluster->Y(),vtxFromCluster->Z(),IpMeanCluster,sum_ip,vtxNew->X(),vtxNew->Y(),vtxNew->Z(),IpMeanNewVtx);
+
+				 index_cl++;
+				 ncls++;
+			       }
+			     }
+			   }
+			 }
+		       }
+		     }
+		     
+		     }
+		     delete tarr;
+		     delete vtxOriginal;
+		     delete vtxNew;
+		     break;*/
+		 }		 
+		 }
+	       }	     
+	     }
+	   }
+	 }
+	 
+	  
+	  
+       // RICERCA SUI PRIMI VICINI   (otto cubetti intorno + il cubetto medesimo)
+	 //cout << no_secondary_search << endl;
+	 if(!no_secondary_search){
+	   //cout << "HELLOOOOOOOOOOOOOOOOOOOOOOOO"<< endl;
+
+	   // zed 10000
+	   tmp_i_m1 = tmp_i;
+	   tmp_j_m1 = tmp_j;
+	   tmp_k_m1 = tmp_k;
+	   
+	   tmp_i_p1 = tmp_i + 1;  // 2.5 mm
+	   tmp_j_p1 = tmp_j + 1;  // 2.5 mm
+	   tmp_k_p1 = tmp_k + 4;  // almeno 7.5 mm
+
+	   if(tmp_i_m1<0)tmp_i_m1=0;
+	   if(tmp_j_m1<0)tmp_j_m1=0;
+	   if(tmp_k_m1<0)tmp_k_m1=0;
+	   
+	   if(tmp_i_p1>vbinx)tmp_i_p1=vbinx;
+	   if(tmp_j_p1>vbiny)tmp_j_p1=vbiny;
+	   if(tmp_k_p1>vbinz)tmp_k_p1=vbinz;
+	   
+	   //cout << tmp_i << " " << tmp_i_m1 << " " << tmp_i_p1 << endl;
+	   //cout << tmp_j << " " << tmp_j_m1 << " " << tmp_j_p1 << endl;
+	   //cout << tmp_k << " " << tmp_k_m1 << " " << tmp_k_p1 << endl;
+
+	   // loop sui primi vicini
+	   for(int i=tmp_i_m1;i<tmp_i_p1;i++){
+	     for(int j=tmp_j_m1;j<tmp_j_p1;j++){
+	       for(int k=tmp_k_m1;k<tmp_k_p1;k++){
+		 //cout << "cubs " << i << " " << j << " " << k << endl;
+		 
+		 if(!vtx_list_nearby.at(i).at(j).at(k).empty()){
+		   //cout <<"size "<< i <<" "<< j<< " " << k  << " " << vtx_list.at(i).at(j).at(k).size() << endl;
+		   // SEARCH IN VERTEX NEARBY
+		   for(int l=0;l< vtx_list_nearby.at(i).at(j).at(k).size();l++){
+		     int tmp_index = vtx_fedratree->GetEntryNumberWithIndex(vtx_list_nearby.at(i).at(j).at(k).at(l)); // indice sul vertice secondario
+		     vtx_fedratree->GetEntry(tmp_index);
+		     
+		     //cout << "2nd vtx " << i << " " << j << " " << k << " " <<  l << " " << tmp_index << endl;
+	       
+		     vtx_pos_nearby.SetXYZ(vx,vy,vz);
+		     fdz = vz - tmp_vz;
+		     float trk_fdz=0;
+
+		     bool trk_found=false;
+
+		     log_decay << "DS info on secondary vertex " << endl;
+		     if(flag==0 || flag==3)log_decay <<"Nearby neutral vertex found " << vtx_list_nearby.at(i).at(j).at(k).at(l) << " at distance " << (vz-tmp_vz) << " with " << n << " tracks " << endl;
+		     if(flag==4)log_decay <<"Nearby linked vertex found " << vtx_list_nearby.at(i).at(j).at(k).at(l) << " at distance " << (vz-tmp_vz) << " with " << n << " tracks " << endl;
+		     
+		     Fill2ndVertex(vtx_list_nearby.at(i).at(j).at(k).at(l),vx,vy,vz,n,fdz,flag,vtx_bdt2.at(tmp_index).at(0),probability);
+
+		     int sum_seg=0;
+		     
+		     for(int itrk=0;itrk<n;itrk++){
+
+		       float trk_kink_random[3]={};
+		       float trk_kink_consecutive[3]={};
+		       
+		       trk_pos.SetXYZ(t__eX[itrk],t__eY[itrk],t__eZ[itrk]);
+		       trk_fdz = vz - tmp_vz;
+		       ip = IPtoVertex(vtx_pos, trk_pos, t__eTX[itrk], t__eTY[itrk]);
+		       mc_tx = (vx - tmp_vx)/trk_fdz;
+		       mc_ty = (vy - tmp_vy)/trk_fdz;
+		       ka = sqrt(pow(mc_tx - t__eTX[itrk],2) + pow(mc_ty - t__eTY[itrk],2));
+		       
+		       log_decay << "Linked to the vertex " << vtx_list_nearby.at(i).at(j).at(k).at(l)  << " Track in "<< i << " " << j << " " << k << " " <<   l <<  " with TrkID " << TrackID[itrk] << " and " << nseg[itrk] << " segments" << " and zpos " << incoming[itrk] << endl;
+		       log_decay << "track_pos (XYZ) "<< t__eX[itrk] << " " << t__eY[itrk] << " " << t__eZ[itrk]  << endl;
+		       log_decay << "track_dir (TX - TY) " << t__eTX[itrk] << " " << t__eTY[itrk] << endl;
+		       log_decay << "ip: " << ip << " - ka: " << ka << endl;
+		       int MCEventId = MCEventID[itrk];
+		       if(MCEventId<0)MCEventId=0;
+		       if(MCMotherID[itrk]==1 || MCMotherID[itrk]==2) mc_charm_found.at(MCEventId).at(MCMotherID[itrk]-1) = true;
+		       
+		       // assegno le coordinate del neutral nearby vertex (mi serviranno per la ricerca di tracce staccate che possano essere il parent, quindi un charged)
+		       nvx.push_back(vx);
+		       nvy.push_back(vy);
+		       nvz.push_back(vz);
+
+
+		       // segments
+		       if(nseg[itrk]>=3){
+			 float seg_x[nseg[itrk]];
+			 float seg_y[nseg[itrk]];
+			 float seg_z[nseg[itrk]];
+			 float seg_tx[nseg[itrk]];
+			 float seg_ty[nseg[itrk]];
+			 float seg_mc_trk[nseg[itrk]];
+			 float seg_mc_evt[nseg[itrk]];
+			 
+			 for(int u=sum_seg;u<(sum_seg+nseg[itrk]);u++){
+			   seg_x[u-sum_seg]=s__eX[u];
+			   seg_y[u-sum_seg]=s__eY[u];
+			   seg_z[u-sum_seg]=s__eZ[u];
+			   seg_tx[u-sum_seg]=s__eTX[u];
+			   seg_ty[u-sum_seg]=s__eTY[u];
+			 }
+
+			 //cout << "TRACK INFO RMS " << vtx_list_nearby.at(i).at(j).at(k).at(l) << " " << TrackID[itrk] << endl;
+			 FedraTrackKinkRandom(nseg[itrk],seg_tx,seg_ty,trk_kink_random);
+			 //cout << "kink 3 tka rms mean max " << trk_kink[0] << " " << trk_kink[1] << " " << trk_kink[2] << endl;
+			 FedraTrackKinkConsecutive(nseg[itrk],seg_tx,seg_ty,trk_kink_consecutive);
+			 //cout << "kink 4 tka rms mean max " << trk_kink[0] << " " << trk_kink[1] << " " << trk_kink[2] << endl;
+			 //SegIPtoVertex3(vtx_pos_nearby, nseg[itrk], seg_x, seg_tx, seg_y, seg_ty, seg_z,trk_ip);
+		       }
+		       else{
+			 trk_kink_random[0]=0;
+			 trk_kink_random[1]=0;
+			 trk_kink_random[2]=0;
+			 trk_kink_consecutive[0]=0;
+			 trk_kink_consecutive[1]=0;
+			 trk_kink_consecutive[2]=0;
+		       }
+
+		       
+		       float pms=-1, pms_ang=-1;
+		       if(ip<500 && ka<0.4 && nseg[itrk]>=3 && (vz-tmp_vz)>1000 && trk_kink_random[0]<1){
+			 EdbTrackP *aTrk;
+			 aTrk = makeTrk(trk_fedratree,TrackID[itrk],sum_seg);
+			 tie(pms,pms_ang) =  momentum_estimator(*aTrk);
+		       }
+		       
+		       sum_seg += nseg[itrk];
+
+
+		       
+
+		       // check MC momentum
+		       simtree->GetEntry(MCEventID[itrk]);
+		       float mc_edep=0;
+		       float mc_mom=-1;
+		       for(uint isim=0;isim<EmuBaseTrks_;isim++){
+			 if(EmuBaseTrks_fTrackID[isim]==MCTrackID[itrk]){
+			   float tmpMom = TMath::Sqrt(EmuBaseTrks_fPx[isim]*EmuBaseTrks_fPx[isim]+EmuBaseTrks_fPy[isim]*EmuBaseTrks_fPy[isim]+EmuBaseTrks_fPz[isim]*EmuBaseTrks_fPz[isim]);
+			   if(tmpMom>=mc_mom)mc_mom=tmpMom;
+			   mc_edep += EmuBaseTrks_fELoss[isim];
+			 }
+		       }
+		       
+		       
+		       Fill2ndTrack(TrackID[itrk],t__eX[itrk],t__eY[itrk],t__eZ[itrk],t__eTX[itrk],t__eTY[itrk],nseg[itrk],npl[itrk],nholes[itrk],maxgap[itrk],ip,ka,MCEventID[itrk],MCTrackID[itrk],MCMotherID[itrk],trk_kink_consecutive[0],trk_kink_consecutive[1],trk_kink_consecutive[2],trk_kink_random[0],trk_kink_random[1],trk_kink_random[2],incoming[itrk],pms,pms_ang,mc_mom,mc_edep);
+		       
+		     }
+		   }
+		 }
+	       }
+	     }
+	   }
+
+	   
+	   // extra track search
+	   
+	   for(int i=tmp_i_m1;i<tmp_i_p1;i++){
+	     for(int j=tmp_j_m1;j<tmp_j_p1;j++){
+	       for(int k=tmp_k_m1;k<tmp_k_p1;k++){
+		 
+		 if(!vtx_list.at(i).at(j).at(k).empty()){
+		   //cout <<"size "<< trk_list.at(i).at(j).at(k).size() << endl;
+		   // SEARCH IN VERTEX NEARBY
+		   for(int l=0;l< trk_list.at(i).at(j).at(k).size();l++){
+		     //cout << "hello tracks" << endl;
+		     int tmp_index = trk_fedratree->GetEntryNumberWithIndex(trk_list.at(i).at(j).at(k).at(l)); // indice sul vertice secondario
+		     trk_fedratree->GetEntry(tmp_index);
+		     float dtheta[2]={};
+		     float ipseg[2]={};
+		     trk_pos.SetXYZ(t_->X(),t_->Y(),t_->Z());
+		     fdz = t_->Z() - tmp_vz;
+		     float extrk_vip = IPtoVertex(vtx_pos, trk_pos, t_->TX(), t_->TY());
+		     mc_tx = (t_->X()- tmp_vx)/fdz;
+		     mc_ty = (t_->Y()- tmp_vy)/fdz;
+		     float extrk_vka = sqrt(pow(mc_tx - t_->TX(),2) + pow(mc_ty - t_->TY(),2));
+		     FedraTrackKink2(tnseg,s_eTX,s_eTY,dtheta);
+		     SegIPtoVertex2(vtx_pos, tnseg, s_eX, s_eTX, s_eY, s_eTY, s_eZ, ipseg);
+		     
+		     if(tnseg>=cut_nseg && fdz>cut_extrk_min_dz && fdz<cut_extrk_max_dz && extrk_vip>cut_lip && extrk_vip<cut_max_ip && extrk_vka<cut_vtx2_ka){
+		       log_decay << "DS info on extra tracks " << endl;
+		       log_decay <<"Extra track found " << trk_list.at(i).at(j).at(k).at(l) << " at distance " << (t_->Z()-tmp_vz) << " with " << tnseg << " segments and IP " << extrk_vip << " and KA " << extrk_vka << endl;
+		       //FillDSextrk(tmp_index);
+		       FillDSextrk(tmp_index,t_->X(),t_->Y(),t_->Z(),t_->TX(),t_->TY(),tnseg,tnpl,n0,-1,extrk_vip,extrk_vka,t_->MCEvt(),t_->MCTrack(),t_->Aid(0));
+		       //FillExtraTrack(-1,trid,-1,-1,tnseg,-1,extrk_vip,extrk_vka,ipseg[0],ipseg[1],dtheta[0],dtheta[1],t_->X(),t_->Y(),t_->Z(),t_->TX(),t_->TY());
+		       
+		       tmp_trk_sel.push_back(tmp_index);
+		       nextrk++;
+		       if(dtheta[0]==ipseg[0] && dtheta[1]>cut_prg1 && ipseg[1]>cut_prg1){
+			 // aggiungi booleano
+			 log_decay << "DS info on extra tracks " << endl;
+			 log_decay <<"Extra track found " << trk_list.at(i).at(j).at(k).at(l) << " at distance " << (t_->Z()-tmp_vz) << " with " << tnseg << " segments and ipmax " << ipseg[1] << " and rmax " << dtheta[1] << " at the plate " << dtheta[0] <<   endl;
+		       }
+		     }
+		   }
+		 }		 
+	       }
+	     }
+	   }
+	 }
+	 
+	 sort(tmp_trk_sel.begin(), tmp_trk_sel.end() );
+	 tmp_trk_sel.erase(unique( tmp_trk_sel.begin(), tmp_trk_sel.end() ), tmp_trk_sel.end());
+	 //int ds_count[5]={nextrk,nprg1,ncls,nvtx2,nlip};
+	 nfound = tmp_trk_sel.size();
+	 //FillVertex(event,ientry,-1,n,maxaperture,probability,vx,vy,vz,-1,-1,-1,flag,true,-1,mean_ip[ientry]);
+	 FillDSVertex(-1,-1,nfound,nextrk,nprg1,ncls,nvtx2,nlip);
+	 TreeDS->Fill();
+	 if(ientry%100==0)TreeDS->AutoSave("SaveSelf");
+	 event++;
+	 
+       }                 
+    }
+
+    int charm_vtx_found=0;
+    for(int i=0;i<nsim;i++){
+      for(int j=0;j<2;j++){
+	if(mc_charm_found.at(i).at(j)==true)charm_vtx_found++;
+      }
+    }
+    
+    
+    TreeDS->Write();
+    f_ds->Close();
+    log_decay << "DECAY SEARCH LOG TERMINED" << endl;
+    log_ds << "MC ADDITIONAL INFO (no valid for data)" << endl;
+    log_ds << "Number of charm linked to a decay vertex with at least 1 charm daugther " << charm_vtx_found << endl;
+    log_decay.close();
+    log_ds.close();  
+    
+  }
+  
+}
+
+int myrun(){
+  Loop(); 
+  return 0;
+}

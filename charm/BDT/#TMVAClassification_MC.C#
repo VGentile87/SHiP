@@ -128,19 +128,35 @@ void FedraTrackKinkRandom(int nseg, float* seg_tx, float* seg_ty, float trk_kink
 // BDT INPUT FOR INTERACTION VERTICES
 void prepareTMVAtree(){
 
-  TFile *f2(0);
+   int choice=0;
+  
+   cout << "Scegli il dataset (1: CHARM simulation; 2: BACKGROUND simulation\t";
+   cin >> choice;
+   cout << endl;
+
+   TFile *f2(0);
    TFile *f(0);
    TString f_name="";
-   //cout << "Inserire nome file vertici: " << endl;
-   //cin >> f_name;
-   //cout << endl;
-   f_name = "../vertextree.root";
-   f = TFile::Open( f_name );
-   if(!f){
-     std::cout << "ERROR: could not open data file" << std::endl;
-     exit(1);
+   TString f2_name="";
+   switch(choice){
+   case 1:
+     f_name = "vtx_MC_analysis.root";
+     f = TFile::Open( f_name );
+     if(!f){
+       std::cout << "ERROR: could not open data file" << std::endl;
+       exit(1);
+     }
+     break;
+   case 2:
+     f_name = "vtx_MC_analysis_POT.root";
+     f = TFile::Open( f_name );
+     if(!f) {
+       std::cout << "ERROR: could not open data file" << std::endl;
+       exit(1);
+     }
+     break;
    }
-
+   
    f->cd();   
    TTreeReader vtxreader("vtx",f);
    
@@ -156,53 +172,68 @@ void prepareTMVAtree(){
    TTreeReaderValue<float> v_x(vtxreader,"vx");
    TTreeReaderValue<float> v_y(vtxreader,"vy");
    TTreeReaderValue<float> v_z(vtxreader,"vz");
-     
-   
+   TTreeReaderValue<char> vgood(vtxreader,"vtx_good");
+   TTreeReaderValue<int> mppdg(vtxreader,"mp_pdgID");
+   TTreeReaderValue<int> mpmother(vtxreader,"mp_motherID");
+   TTreeReaderValue<int> mpevent(vtxreader,"mp_eventID");
+   TTreeReaderValue<bool> charmdaug(vtxreader,"charm_daug");    //no POT
   
-   
-   Char_t vtx_good;
-   Int_t vID, mp_pdgID,ntracks, mp_motherID,flag, mp_eventID;
-   Float_t meanTX, meanTY,meannseg, maxaperture, probability,vx,vy,vz;
-   Float_t maxIP, meanIP, vtx_node, vtx_holes, vtx_gap, vtx_fill;
-   Bool_t charm_daug;
-   
-   const Int_t maxtracks = 1000; //I do not expect a larger number of tracks than this
-   const Int_t maxseg=30;
-   Int_t incoming[maxtracks], trk_num_holes[maxtracks], trk_max_gap[maxtracks];
-   Float_t t_eTX[maxtracks], t_eTY[maxtracks],  trackfill[maxtracks],impactparameter[maxtracks];
-   Int_t s_ePID[maxseg], t__;
-   
-   
-   TString outfileName("");
-   outfileName = "tmva_input_vertices.root";
-   
   
-   TFile * outputfile = new TFile(outfileName,"RECREATE");
-   
-   TTree *outputvtx = new TTree("vertices","Input file for TMVA analysis");
-   
   
-   outputvtx->Branch("vID",&vID,"vID/I");
-   outputvtx->Branch("vx",&vx,"vx/F");
-   outputvtx->Branch("vy",&vy,"vy/F");
-   outputvtx->Branch("vz",&vz,"vz/F");
-   outputvtx->Branch("ntracks",&ntracks,"ntracks/I");
-   outputvtx->Branch("probability",&probability,"probability/F");
-   outputvtx->Branch("maxaperture",&maxaperture,"maxaperture/F");
-   outputvtx->Branch("meannseg",&meannseg,"meannseg/F");
-   outputvtx->Branch("meanTX",&meanTX,"meanTX/F");
-   outputvtx->Branch("meanTY",&meanTY,"meanTY/F");
-   outputvtx->Branch("maxIP",&maxIP,"maxIP/F");
-   outputvtx->Branch("meanIP",&meanIP,"meanIP/F");
-   outputvtx->Branch("vtx_fill",&vtx_fill,"vtx_fill/F");
-   
+  
+  Char_t vtx_good;
+  Int_t vID, mp_pdgID,ntracks, mp_motherID,flag, mp_eventID;
+  Float_t meanTX, meanTY,meannseg, maxaperture, probability,vx,vy,vz;
+  Float_t maxIP, meanIP, vtx_node, vtx_holes, vtx_gap, vtx_fill;
+  Bool_t charm_daug;
+  
+  const Int_t maxtracks = 1000; //I do not expect a larger number of tracks than this
+  const Int_t maxseg=30;
+  Int_t incoming[maxtracks], trk_num_holes[maxtracks], trk_max_gap[maxtracks];
+  Float_t t_eTX[maxtracks], t_eTY[maxtracks],  trackfill[maxtracks],impactparameter[maxtracks];
+  Int_t s_ePID[maxseg], t__;
+
+
+  TString outfileName("");
+  switch(choice){
+  case 1:
+    outfileName = "tmva_input_vertices.root";
+    break;
+  case 2:
+    outfileName = "tmva_input_vertices_POT.root";
+    break;
+  }
+  
+  TFile * outputfile = new TFile(outfileName,"RECREATE");
+  
+  TTree *outputvtx = new TTree("vertices","Input file for TMVA analysis");
+  
+  outputvtx->Branch("vtx_good",&vtx_good,"vtx_good/B");
+  outputvtx->Branch("mp_eventID",&mp_eventID,"mp_eventID/I");
+  outputvtx->Branch("mp_pdgID",&mp_pdgID,"mp_pdgID/I");
+  outputvtx->Branch("mp_motherID",&mp_motherID,"mp_motherID/I");
+  outputvtx->Branch("charm_daug",&charm_daug,"charm_daug/O");
+  outputvtx->Branch("vID",&vID,"vID/I");
+  outputvtx->Branch("vx",&vx,"vx/F");
+  outputvtx->Branch("vy",&vy,"vy/F");
+  outputvtx->Branch("vz",&vz,"vz/F");
+  outputvtx->Branch("ntracks",&ntracks,"ntracks/I");
+  outputvtx->Branch("probability",&probability,"probability/F");
+  outputvtx->Branch("maxaperture",&maxaperture,"maxaperture/F");
+  outputvtx->Branch("meannseg",&meannseg,"meannseg/F");
+  outputvtx->Branch("meanTX",&meanTX,"meanTX/F");
+  outputvtx->Branch("meanTY",&meanTY,"meanTY/F");
+  outputvtx->Branch("maxIP",&maxIP,"maxIP/F");
+  outputvtx->Branch("meanIP",&meanIP,"meanIP/F");
+  outputvtx->Branch("vtx_fill",&vtx_fill,"vtx_fill/F");
+  
   const Int_t nvertices = vtxreader.GetEntries();
   //cout << nvertices << endl;
   
   for (int ivtx=0;ivtx<nvertices;ivtx++){
-    
+
     vtxreader.Next();
-    
+
     meannseg = 0.;
     meanTX = 0.;
     meanTY = 0.;
@@ -213,13 +244,18 @@ void prepareTMVAtree(){
     vtx_holes=0.;
     vtx_gap=0.;
     vtx_fill=0.;
-    
+
     vID=*vid;
     vx=*v_x;
     vy=*v_y;
     vz=*v_z;
     ntracks = *n;
     flag =*Flag;
+    vtx_good = *vgood;
+    mp_eventID = *mpevent;
+    mp_pdgID = *mppdg;
+    mp_motherID = *mpmother;
+    charm_daug = *charmdaug;   //no POT
     maxaperture = *maxap;
     probability = *prob;
     
@@ -266,70 +302,107 @@ void prepareTMVAtree(){
 
 
 // BDT INPUT FOR DECAY VERTICES 
-void prepareTMVAtree2nd(float cut_bdt_val=-1){
+void prepareTMVAtree2nd(){
 
+   int choice=0;
   
-  TFile *f2(0);
-  TFile *f(0);
-  TString f_name="";
-  TString f2_name="";
-  f2_name = "vtx_BDT_data_evaluated.root";     // tutto
-  f_name = "../vertextree.root";
-  f = TFile::Open( f_name );
-  f2 = TFile::Open( f2_name );
-  if(!f || !f2) {
-    std::cout << "ERROR: could not open data file" << std::endl;
-    exit(1);
-  }
-       
-  f->cd();   
-  TTreeReader vtxreader("vtx",f);
-  f2->cd();   
-  TTreeReader mckreader("bdt",f2);
-  
-  TTreeReaderArray<EdbSegP> segments(vtxreader,"s");
-  TTreeReaderArray<EdbSegP> tracks(vtxreader,"t.");
-  TTreeReaderArray<float> IP(vtxreader,"impactparameter");
-  TTreeReaderArray<int> nseg(vtxreader,"nseg");
-  TTreeReaderValue<float> maxap(vtxreader,"maxaperture");
-  TTreeReaderValue<float> prob(vtxreader,"probability");
-  TTreeReaderValue<int> n(vtxreader,"n");
-  TTreeReaderValue<int> vid(vtxreader,"vID");
-  TTreeReaderArray<int> Incoming(vtxreader,"incoming");
-  TTreeReaderValue<int> Flag(vtxreader,"flag");
-  TTreeReaderValue<float> v_x(vtxreader,"vx");
-  TTreeReaderValue<float> v_y(vtxreader,"vy");
-  TTreeReaderValue<float> v_z(vtxreader,"vz");
-  TTreeReaderValue<float> bdt_value(mckreader,"bdt_value");
-  TTreeReaderValue<int> bdt_vID(mckreader,"bdt_vID");
-  
-  Char_t vtx_good;
-  Int_t vID, mp_pdgID,ntracks,mp_motherID,flag, mp_eventID, bdt_vtxID;
-  Float_t bdt_val;
-  Float_t meanTX, meanTY,meannseg, maxaperture, probability,vx,vy,vz;
-  Float_t maxIP, meanIP, vtx_node, vtx_holes, vtx_gap, vtx_fill;
-  float mean_rms_ip=0;
-  float mean_rms_kink=0;
-  
-  const Int_t maxtracks = 1000; //I do not expect a larger number of tracks than this
-  const Int_t maxseg=30;
-  Int_t incoming[maxtracks], trk_num_holes[maxtracks], trk_max_gap[maxtracks];
-  Float_t t_eTX[maxtracks], t_eTY[maxtracks],  trackfill[maxtracks],impactparameter[maxtracks];
-  Int_t s_ePID[maxseg], t__;
-  Bool_t charm_daug;
-  
-  if(cut_bdt_val==-1){
-    cout << "Inserire cut BDT interaction ";
-    cin >> cut_bdt_val;
-    cout << endl;
-  }
-  
-  TString outfileName("");
-  outfileName = "tmva_input_vertices2nd.root";
+   cout << "Scegli il dataset (1: CHARM simulation; 2: BACKGROUND simulation)\t";
+   cin >> choice;
+   cout << endl;
+
+   TFile *f2(0);
+   TFile *f(0);
+   TString f_name="";
+   TString f2_name="";
+   switch(choice){
+   case 1:
+     f2_name = "vtx_BDT_data_evaluated.root";     // tutto
+     f_name = "vtx_MC_analysis.root";
+     f = TFile::Open( f_name );
+     f2 = TFile::Open( f2_name );
+     if(!f || !f2) {
+       std::cout << "ERROR: could not open data file" << std::endl;
+       exit(1);
+     }
+     break;
+   case 2:
+     f2_name = "vtx_BDT_data_evaluated_POT.root";     // tutto
+     f_name = "vtx_MC_analysis_POT.root";
+     if (!gSystem->AccessPathName(f_name )) {
+       f = TFile::Open( f_name );
+       f2 = TFile::Open( f2_name );
+     }
+     if(!f || !f2) {
+       std::cout << "ERROR: could not open data file" << std::endl;
+       exit(1);
+     }
+     break;
+   }
      
-  TFile * outputfile = new TFile(outfileName,"RECREATE");
+   f->cd();   
+   TTreeReader vtxreader("vtx",f);
+   f2->cd();   
+   TTreeReader mckreader("bdt",f2);
+   
+   TTreeReaderArray<EdbSegP> segments(vtxreader,"s");
+   TTreeReaderArray<EdbSegP> tracks(vtxreader,"t.");
+   TTreeReaderArray<float> IP(vtxreader,"impactparameter");
+   TTreeReaderArray<int> nseg(vtxreader,"nseg");
+   TTreeReaderValue<float> maxap(vtxreader,"maxaperture");
+   TTreeReaderValue<float> prob(vtxreader,"probability");
+   TTreeReaderValue<int> n(vtxreader,"n");
+   TTreeReaderValue<int> vid(vtxreader,"vID");
+   TTreeReaderArray<int> Incoming(vtxreader,"incoming");
+   TTreeReaderValue<int> Flag(vtxreader,"flag");
+   TTreeReaderValue<float> v_x(vtxreader,"vx");
+   TTreeReaderValue<float> v_y(vtxreader,"vy");
+   TTreeReaderValue<float> v_z(vtxreader,"vz");
+   TTreeReaderValue<char> vgood(vtxreader,"vtx_good");
+   TTreeReaderValue<int> mpevent(vtxreader,"mp_eventID");
+   TTreeReaderValue<int> mppdg(vtxreader,"mp_pdgID");
+   TTreeReaderValue<int> mpmother(vtxreader,"mp_motherID");
+   //TTreeReaderValue<bool> charmdaug(vtxreader,"charm_daug");    //no POT
+   TTreeReaderValue<float> bdt_value(mckreader,"bdt_value");
+   TTreeReaderValue<int> bdt_vID(mckreader,"bdt_vID");
+  
+   Char_t vtx_good;
+   Int_t vID, mp_pdgID,ntracks,mp_motherID,flag, mp_eventID, bdt_vtxID;
+   Float_t bdt_val;
+   Float_t meanTX, meanTY,meannseg, maxaperture, probability,vx,vy,vz;
+   Float_t maxIP, meanIP, vtx_node, vtx_holes, vtx_gap, vtx_fill;
+   float mean_rms_ip=0;
+   float mean_rms_kink=0;
+   
+   const Int_t maxtracks = 1000; //I do not expect a larger number of tracks than this
+   const Int_t maxseg=30;
+   Int_t incoming[maxtracks], trk_num_holes[maxtracks], trk_max_gap[maxtracks];
+   Float_t t_eTX[maxtracks], t_eTY[maxtracks],  trackfill[maxtracks],impactparameter[maxtracks];
+   Int_t s_ePID[maxseg], t__;
+   Bool_t charm_daug;
+   
+   float cut_bdt_val;
+   cout << "Inserire cut BDT interaction ";
+   cin >> cut_bdt_val;
+   cout << endl;
+   
+   TString outfileName("");
+   switch(choice){
+   case 1:
+     outfileName = "tmva_input_vertices2nd.root";
+     break;
+   case 2:
+     outfileName = "tmva_input_vertices2nd_POT.root";
+     break;
+   }
+   
+   TFile * outputfile = new TFile(outfileName,"RECREATE");
   TTree *outputvtx = new TTree("vertices","Input file for TMVA analysis");
   
+  outputvtx->Branch("vtx_good",&vtx_good,"vtx_good/B");
+  outputvtx->Branch("mp_eventID",&mp_eventID,"mp_eventID/I");
+  outputvtx->Branch("mp_pdgID",&mp_pdgID,"mp_pdgID/I");
+  outputvtx->Branch("mp_motherID",&mp_motherID,"mp_motherID/I");
+  outputvtx->Branch("charm_daug",&charm_daug,"charm_daug/O");
   outputvtx->Branch("vID",&vID,"vID/I");
   outputvtx->Branch("vx",&vx,"vx/F");
   outputvtx->Branch("vy",&vy,"vy/F");
@@ -386,7 +459,13 @@ void prepareTMVAtree2nd(float cut_bdt_val=-1){
     vz=*v_z;
     ntracks = *n;
     flag =*Flag;
-
+    
+    vtx_good = *vgood;
+    mp_eventID = *mpevent;
+    mp_pdgID = *mppdg;
+    mp_motherID = *mpmother;
+    //charm_daug = *charmdaug;  // no POT
+    
     maxaperture = *maxap;
     probability = *prob;
     //bdt_val = *bdt_value;
@@ -486,6 +565,8 @@ void prepareTMVAtree2nd(float cut_bdt_val=-1){
   outputfile->Close();
   
 }
+
+
 
 void prepareTMVAtreeDS(){
 
@@ -788,7 +869,6 @@ void prepareTMVAtreeDS(){
 
 
 
-
 /// \file
 /// \ingroup tutorial_tmva
 /// \notebook -nodraw
@@ -1039,9 +1119,16 @@ int TMVAClassification_MC( TString myMethodList = "" )
   case 1:
     //signalTree = sampleTree->CopyTree("mp_motherID==-1");
     //backgroundTree = sampleTree->CopyTree("!(mp_motherID==-1)");
+    int cut_ntrk;
+    float cut_vz;
+    cout << "Inserisci cut numero minimo di tracce ";
+    cin >> cut_ntrk;
+    cout << "Inserisci cut superiore in Vz ";
+    cin >> cut_vz;
+    cout << endl;
     outputFile->SetName(outfileName);
-    signalTree = sampleTree->CopyTree("mp_motherID==0 && ntracks>4");
-    backgroundTree = sampleTree->CopyTree("!(mp_motherID==0) && ntracks>4");
+    signalTree = sampleTree->CopyTree(Form("mp_motherID==0 && ntracks>=%d && vz<%.2f",cut_ntrk,cut_vz));
+    backgroundTree = sampleTree->CopyTree(Form("!(mp_motherID==0 && ntracks>=%d && vz<%.2f)",cut_ntrk,cut_vz));
     break;
   case 2:
     // escludo primari
@@ -1099,7 +1186,7 @@ int TMVAClassification_MC( TString myMethodList = "" )
     dataloader->AddVariable("probability", 'F');
     dataloader->AddVariable("maxaperture", 'F');   // tutto
     dataloader->AddVariable("IP_var := meanIP/maxIP",'F');
-    dataloader->AddVariable("fill:=vtx_fill*ntracks",'F');
+    //dataloader->AddVariable("fill:=vtx_fill/ntracks",'F');
     break;
     //
   case 2:
@@ -1214,7 +1301,7 @@ int TMVAClassification_MC( TString myMethodList = "" )
     // CUT TUTTO
     dataloader->PrepareTrainingAndTestTree( mycuts, mycutb,
 					    //"nTrain_Signal=1088:nTrain_Background=14426:SplitMode=Random:NormMode=NumEvents:!V" );
-					    "nTrain_Signal=979:nTrain_Background=633:SplitMode=Random:NormMode=NumEvents:!V" );
+					    "nTrain_Signal=979:nTrain_Background=15493:SplitMode=Random:NormMode=NumEvents:!V" );
     break;//(1042,12156)
   case 2:
   // CUT ESCLUSI PRIMARI
@@ -1225,7 +1312,7 @@ int TMVAClassification_MC( TString myMethodList = "" )
     
     // CUT DS
     dataloader->PrepareTrainingAndTestTree( mycuts, mycutb,
-					   "nTrain_Signal=522:nTrain_Background=5696:SplitMode=Random:NormMode=NumEvents:!V" );
+					   "nTrain_Signal=476:nTrain_Background=5038:SplitMode=Random:NormMode=NumEvents:!V" );
     break;
   }
   

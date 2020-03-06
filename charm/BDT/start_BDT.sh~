@@ -9,23 +9,13 @@ read choice
 if [ $choice -ge 100 ] && [ $choice -lt 200 ]; then
     root -l <<EOC
 gROOT->ProcessLine(".L TMVAClassification.C");
-prepareTMVAtree();
+prepareTMVAtree()
 .q
 EOC
-    root -l TMVAClassificationApplication.C\(1\) <<EOC
-.q    
+    root -l <<EOC
+gROOT->ProcessLine(".x TMVAClassificationApplication.C(1)");
 EOC
-
-    if [ $choice -eq 120 ]; then
-	root -l <<EOC
-gROOT->ProcessLine(".L TMVAClassification.C");
-prepareTMVAtree2nd(0.15);
-.q
-EOC
-	root -l TMVAClassificationApplication2nd.C\(1\) <<EOC
-.q
-EOC
-    fi
 fi
 
-cp tmva_* vtx_BDT* ../
+
+

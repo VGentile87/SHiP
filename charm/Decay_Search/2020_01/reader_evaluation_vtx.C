@@ -21,6 +21,10 @@ void reader_evaluation_vtx(){
    TTreeReaderValue<float> Bdt(theReaderBDT, "bdt_value");
    TTreeReaderValue<float> Vtx_z(theReaderVTX, "vtx_z");
    TTreeReaderValue<float> Vtx2_z(theReaderVTX, "vtx2_z");
+   TTreeReaderValue<float> Vtx_x(theReaderVTX, "vtx_x");
+   TTreeReaderValue<float> Vtx2_x(theReaderVTX, "vtx2_x");
+   TTreeReaderValue<float> Vtx_y(theReaderVTX, "vtx_y");
+   TTreeReaderValue<float> Vtx2_y(theReaderVTX, "vtx2_y");
    // TTreeReaderValue<float> Trk_z(theReaderVTX, "trk_z");
    TTreeReaderValue<float> Decaylength(theReaderVTX, "decaylength");
    //TTreeReaderValue<float> Trk_fill(theReaderVTX, "trk_fill");
@@ -72,13 +76,15 @@ void reader_evaluation_vtx(){
    TH1I *hbkg_vtx = new TH1I("hbkg_vtx","hbkg_vtx",nvtx,0,nvtx);
    TH1I *hdat_vtx = new TH1I("hdat_vtx","hdat_vtx",nvtx,0,nvtx);
 
+   TH1F *hdist = new TH1F("hdist","hdist",400,0,40000);
+
    vector<vector<int>> couples_sig(nvtx);
    vector<vector<int>> couples_bkg(nvtx);
    vector<vector<int>> couples_bkg2(nvtx);
 
 
    int vtx_id, vtx_mc_ev, zpositive, samevent, charmdaughter, nseg, charm1, charm2, vtx2_id, goodvtx, vtx_ntrk;
-   float impact, kink, dist_tr, bdt_value, vtx_z, vtx2_z, trk_z, decaylength, trk_fill, trk_pms, tka_rms, pointing;
+   float impact, kink, dist_tr, bdt_value, vtx_z, vtx2_z, trk_z, decaylength, trk_fill, trk_pms, tka_rms, pointing, vtx_x, vtx2_x, vtx_y, vtx2_y;
 
    // counters
    int silver=0;
@@ -137,9 +143,15 @@ void reader_evaluation_vtx(){
    float cut_ctau =30;//*TMath::Power(10,-12);
    int cut_vtx1_ntrk =6;
    
-   const Int_t ntrk = theReaderVTX.GetEntries();
+   const Int_t nvtx1 = theReaderVTX.GetEntries();
+
+   float vx[1000]={};
+   float vy[1000]={};
+   float vz[1000]={};
+   int index=0;
+   
    //cout << nvertices << endl;
-   for (int ivtx=0;ivtx<ntrk;ivtx++){
+   for (int ivtx=0;ivtx<nvtx1;ivtx++){
 
      theReaderVTX.Next();
      theReaderBDT.Next();
@@ -149,6 +161,10 @@ void reader_evaluation_vtx(){
      vtx_mc_ev = *Vtx_mc_ev;
      vtx_z = *Vtx_z;
      vtx2_z = *Vtx2_z;
+     vtx_x = *Vtx_x;
+     vtx2_x = *Vtx2_x;
+     vtx_y = *Vtx_y;
+     vtx2_y = *Vtx2_y;
      vtx_ntrk = *Vtx_ntrk;
      //cout << vtx_ntrk << endl;
      zpositive = *zpos;
@@ -169,10 +185,13 @@ void reader_evaluation_vtx(){
      tka_rms = *Tka_rms;
      // cout << ivtx << " " << vtx_id << endl;
 
-     if(zpositive  && goodvtx && pointing!=10 && zpositive && samevent && charmdaughter && vtx_ntrk>=cut_vtx1_ntrk){
+
+     if(zpositive  && goodvtx && pointing!=10 && samevent && charmdaughter && vtx_ntrk>=cut_vtx1_ntrk){
        hsig_nocut->Fill(vtx_mc_ev);
        if(charm1)hch1_nocut->Fill(vtx_mc_ev);
        if(charm2)hch2_nocut->Fill(vtx_mc_ev);
+       //float mean_life = mean_life_estimator(vtx_x,vtx_y,vtx_z,vtx2_x,vtx2_y,vtx2_z);
+       //cout << "is a charm " << mean_life << endl;
      }
 
 
@@ -186,7 +205,7 @@ void reader_evaluation_vtx(){
 		 if(dist_tr<cut_dxy){                     if(charm1)hch1_dxy->Fill(vtx_mc_ev);         if(charm2)hch2_dxy->Fill(vtx_mc_ev); 
 		   if(bdt_value>cut_bdt){                 if(charm1)hch1_bdt->Fill(vtx_mc_ev);         if(charm2)hch2_bdt->Fill(vtx_mc_ev); 
 		     if((vtx2_z-vtx_z)>cut_dz){           if(charm1)hch1_dzvtx->Fill(vtx_mc_ev);       if(charm2)hch2_dzvtx->Fill(vtx_mc_ev); 
-		       if((trk_z-vtx_z)>cut_dz_trk){      if(charm1)hch1_dztrk->Fill(vtx_mc_ev);       if(charm2)hch2_dztrk->Fill(vtx_mc_ev); 
+		       //if((trk_z-vtx_z)>cut_dz_trk){      if(charm1)hch1_dztrk->Fill(vtx_mc_ev);       if(charm2)hch2_dztrk->Fill(vtx_mc_ev); 
 			 if(trk_fill>cut_trk_fill){       if(charm1)hch1_fill->Fill(vtx_mc_ev);        if(charm2)hch2_fill->Fill(vtx_mc_ev);
 			   if(pointing<cut_pointing){     if(charm1)hch1_pointing->Fill(vtx_mc_ev);    if(charm2)hch2_pointing->Fill(vtx_mc_ev); 
 			     if(abs(trk_pms)>=cut_momentum){ if(charm1)hch1_mom->Fill(vtx_mc_ev);      if(charm2)hch2_mom->Fill(vtx_mc_ev); 
@@ -202,7 +221,7 @@ void reader_evaluation_vtx(){
 			     }// if(abs(trk_pms)>cut_momentum){
 			   }
 			 }//if(trk_fill>cut_trk_fill){
-		       }//if((trk_z-vtx_z)>cut_dz_trk){
+			 // }//if((trk_z-vtx_z)>cut_dz_trk){
 		     }//if((vtx2_z-vtx_z)>cut_dz){
 		   }//if(bdt_value>cut_bdt){
 		 }//if(dist_tr<cut_dxy){
@@ -215,6 +234,8 @@ void reader_evaluation_vtx(){
        
        
      if(zpositive && pointing!=10 && vtx_ntrk>=cut_vtx1_ntrk && !(samevent && charmdaughter)){
+       //float mean_life = mean_life_estimator(vtx_x,vtx_y,vtx_z,vtx2_x,vtx2_y,vtx2_z);
+       //cout << "not a charm " << mean_life << endl;
        if(impact<cut_ipmax){
 	 if(impact>cut_ipmin){
 	   if(kink>cut_ka){
@@ -223,7 +244,7 @@ void reader_evaluation_vtx(){
 		 if(dist_tr<cut_dxy){
 		   if(bdt_value>cut_bdt){
 		     if((vtx2_z-vtx_z)>cut_dz){
-		       if((trk_z-vtx_z)>cut_dz_trk){
+		       //if((trk_z-vtx_z)>cut_dz_trk){
 			 if(trk_fill>cut_trk_fill){
 			   if(pointing<cut_pointing){ 
 			     if(abs(trk_pms)>=cut_momentum){
@@ -236,7 +257,7 @@ void reader_evaluation_vtx(){
 			     }// if(abs(trk_pms)>cut_momentum){
 			   }
 			 }//if(trk_fill>cut_trk_fill){
-		       }//if((trk_z-vtx_z)>cut_dz_trk){
+			 //}//if((trk_z-vtx_z)>cut_dz_trk){
 		     }//if((vtx2_z-vtx_z)>cut_dz){
 		   }//if(bdt_value>cut_bdt){
 		 }//if(dist_tr<cut_dxy){
@@ -259,7 +280,7 @@ void reader_evaluation_vtx(){
 		 if(dist_tr<cut_dxy){
 		   if(bdt_value>cut_bdt){
 		     if((vtx2_z-vtx_z)>cut_dz){
-		       if((trk_z-vtx_z)>cut_dz_trk){
+		       //if((trk_z-vtx_z)>cut_dz_trk){
 			 if(trk_fill>cut_trk_fill){
 			   if(pointing<cut_pointing){
 			     if(abs(trk_pms)>=cut_momentum){
@@ -267,11 +288,17 @@ void reader_evaluation_vtx(){
 				 hdat->Fill(vtx_mc_ev);
 				 hdat_vtx->Fill(vtx_id);
 				 log_dat << vtx_id << " " << vtx2_id << " " << bdt_value << endl;
+
+
+				 vx[index]=vtx_x;
+				 vy[index]=vtx_y;
+				 vz[index]=vtx_z;
+				 index++;
 				 //}
 			     }// if(abs(trk_pms)>cut_momentum){
 			   }
 			 }//if(trk_fill>cut_trk_fill){
-		       }//if((trk_z-vtx_z)>cut_dz_trk){
+			 // }//if((trk_z-vtx_z)>cut_dz_trk){
 		     }//if((vtx2_z-vtx_z)>cut_dz){
 		   }//if(bdt_value>cut_bdt){
 		 }//if(dist_tr<cut_dxy){
@@ -284,6 +311,25 @@ void reader_evaluation_vtx(){
      
 
    } // end trk loop
+
+
+   for(int i=0;i<index;i++){
+     if(vx[i]!=0){
+       for(int j=(i+1);j<index;j++){
+	 if(vx[j]!=0){
+	   float dx = vx[j]-vx[i];
+	   float dy = vy[j]-vy[i];
+	   float dz = vz[j]-vz[i];
+	   
+	   float dist = sqrt(dx*dx+dy*dy+dz*dz);
+	   //cout << dist << endl;
+	   hdist->Fill(dist);
+	 }
+       }
+     }
+   }
+   
+   hdist->SaveAs("hdist.root");
 
 
    // contatori
@@ -466,4 +512,6 @@ void reader_evaluation_vtx(){
    log << "Additional info: "<< endl;
    log << "Number of reverse couples " << mixed << endl;
    log.close();
+
+
 }

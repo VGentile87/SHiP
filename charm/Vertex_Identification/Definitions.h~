@@ -637,15 +637,9 @@ static constexpr Int_t kMaxsf = 409;
    Float_t         bdt_value;
    Int_t           bdt_vID;
 
-   Float_t         bvz;
-   Int_t           bntracks;
-
    // List of branches
    TBranch        *b_bdt_value;   //!
    TBranch        *b_bdt_vID;   //!
-
-   TBranch        *b_bvz;   //!
-   TBranch        *b_bntracks;   //!
 
 
 // BDT2
@@ -934,17 +928,6 @@ void bdt_reader(TTree *tree){
   fChain->SetBranchAddress("bdt_value", &bdt_value, &b_bdt_value);
   fChain->SetBranchAddress("bdt_vID", &bdt_vID, &b_bdt_vID);
 }
-
-void vtxbdt_reader(TTree *tree){
-
-  if (!tree) return;
-  fChain = tree;
-  fCurrent = -1;
-  fChain->SetMakeClass(1);
-  fChain->SetBranchAddress("vz", &bvz, &b_bvz);
-  fChain->SetBranchAddress("ntracks", &bntracks, &b_bntracks);
-}
-
 
 void bdt_reader2(TTree *tree){
 
